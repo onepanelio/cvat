@@ -54,6 +54,8 @@ for detection in detections:
 
             contours = find_contours(mask, MASK_THRESHOLD)
             contour = contours[0]
+            if not contours:
+                continue
             contour = np.flip(contour, axis=1)
             contour = approximate_polygon(contour, tolerance=2.5)
             segmentation = contour.tolist()

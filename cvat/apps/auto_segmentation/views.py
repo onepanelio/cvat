@@ -29,7 +29,7 @@ import numpy as np
 
 from cvat.apps.engine.log import slogger
 import sys
-sys.path.append(os.environ.get('AUTO_SEGMENTATION_PATH')) 
+sys.path.append(os.environ.get('AUTO_SEGMENTATION_PATH'))
 from mrcnn.config import Config
 import skimage.io
 from skimage.measure import find_contours, approximate_polygon
@@ -38,7 +38,7 @@ class CocoConfig(Config):
 	"""Configuration for training on MS COCO.
 	Derives from the base Config class and overrides values specific
 	to the COCO dataset.
-	 
+
 	"""
 	# Give the configuration a recognizable name
 	NAME = "cvat"
@@ -55,6 +55,8 @@ def run_tensorflow_auto_segmentation(image_list, labels_mapping, treshold, model
 
 	def _convert_to_segmentation(mask):
 		contours = find_contours(mask, 0.5)
+		if not contours:
+			return []
 		# only one contour exist in our case
 		contour = contours[0]
 		contour = np.flip(contour, axis=1)
@@ -129,7 +131,7 @@ def run_tensorflow_auto_segmentation(image_list, labels_mapping, treshold, model
 		images_org = []
 		slogger.glob.info("images {}".format(images))
 
-		
+
 		for i in range(config.GPU_COUNT):
 			images_org.append(np.array(Image.open(images[i][0])))
 
@@ -272,9 +274,9 @@ def create(request, tid, mid):
 		data = json.loads(request.body.decode('utf-8'))
 		slogger.glob.info("segmentation model id {}".format(mid))
 		slogger.glob.info("payload from the request {}".format(data))
-		user_label_mapping = data["labels"]	
+		user_label_mapping = data["labels"]
 		should_reset = data['reset']
-		slogger.glob.info("user label mapping {}".format(user_label_mapping))	
+		slogger.glob.info("user label mapping {}".format(user_label_mapping))
 
 		db_task = TaskModel.objects.get(pk=tid)
 		db_labels = db_task.label_set.prefetch_related('attributespec_set').all()
@@ -336,9 +338,9 @@ def create(request, tid, mid):
 		if job is not None and (job.is_started or job.is_queued):
 			raise Exception("The process is already running")
 
-		
+
 		num_c = len(auto_segmentation_labels.keys())
-		
+
 		slogger.glob.info("label mapping {}".format(labels_mapping))
 		if not len(labels_mapping.values()):
 			raise Exception('No labels found for auto segmentation')
