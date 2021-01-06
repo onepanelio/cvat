@@ -1,5 +1,11 @@
 FROM node:lts-alpine AS cvat-ui
 
+RUN apk --no-cache add --virtual native-deps \
+  g++ gcc libgcc libstdc++ linux-headers make python && \
+  npm install --quiet node-gyp -g &&\
+  npm install --quiet && \
+  apk del native-deps
+
 ARG http_proxy
 ARG https_proxy
 ARG no_proxy
