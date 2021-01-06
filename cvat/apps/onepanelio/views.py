@@ -70,7 +70,7 @@ def authenticate_cloud_storage():
     else:
         raise ValueError("Invalid cloud provider. Should be from ['s3', 'gcs', az']")
 
-    return data[cloud_provider]['bucket'], cloud_provider, data[cloud_provider]['endpoint']
+    return cloud_provider, data[cloud_provider]['endpoint'], data[cloud_provider]['insecure'], data[cloud_provider]['bucket']
 
 @api_view(['POST'])
 def get_available_dump_formats(request):
@@ -168,7 +168,6 @@ def generate_dataset_path(uid, pk):
 def get_model_keys(request):
     try:
         form_data = request.data
-        # bucket_name = authenticate_cloud_storage()
         checkpoints = [i[0] for i in os.walk(os.getenv('CVAT_SHARE_DIR', '/share') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output')) if form_data['uid']+'/' in i[0]]
         if form_data['sysRefModel']:
             checkpoint_paths = [os.path.join(*[os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')]+c.split("/")[-5:]) for c in checkpoints]
@@ -190,15 +189,12 @@ def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
         TaskModel.objects.get(pk=uid), db_task.owner.username)
 
     # read artifactRepository to find out cloud provider and get access for upload
-
-    bucket_name, cloud_provider, endpoint = authenticate_cloud_storage()
+    cloud_provider, endpoint, insecure, bucket_name = authenticate_cloud_storage()
 
     data = DatumaroTask.get_export_formats()
     formats = {d['name']:d['tag'] for d in data}
     if dump_format not in formats.values():
         dump_format = "cvat_tfrecord"
-
-    # dataset_name = os.getenv('ONEPANEL_RESOURCE_UID').replace(' ', '_') + '_' + db_task.name + "_" + dump_format + "_" + stamp
 
     with tempfile.TemporaryDirectory() as test_dir:
 
@@ -212,8 +208,10 @@ def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
             from s3transfer import TransferConfig, S3Transfer
 
             if endpoint != 's3.amazonaws.com':
-                if not endpoint.startswith('http'):
-                    endpoint = 'https://'+endpoint
+                if insecure:
+                    endpoint = 'http://' + endpoint
+                else:
+                    endpoint = 'https://' + endpoint
                 s3_client = boto3.client('s3', endpoint_url=endpoint)
             else:
                 s3_client = boto3.client('s3')
