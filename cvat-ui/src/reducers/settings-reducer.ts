@@ -230,7 +230,7 @@ export default (state = defaultState, action: AnyAction): SettingsState => {
                 },
             };
         }
-        case SettingsActionTypes.SWITCH_SHOWNIG_INTERPOLATED_TRACKS: {
+        case SettingsActionTypes.SWITCH_SHOWING_INTERPOLATED_TRACKS: {
             return {
                 ...state,
                 workspace: {

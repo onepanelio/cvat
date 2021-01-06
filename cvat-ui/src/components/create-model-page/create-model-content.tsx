@@ -59,7 +59,7 @@ export default class CreateModelContent extends React.PureComponent<Props> {
                 } = this.fileManagerContainer.getFiles();
 
                 const files = local.length ? local : share;
-                const grouppedFiles: ModelFiles = {
+                const groupedFiles: ModelFiles = {
                     xml: '',
                     bin: '',
                     py: '',
@@ -79,8 +79,8 @@ export default class CreateModelContent extends React.PureComponent<Props> {
                     }
 
                     return acc;
-                }, grouppedFiles);
-                
+                }, groupedFiles);
+
                 (files as any).reduce((acc: CsvModelFiles, value: File | string): CsvModelFiles => {
                     const name = typeof value === 'string' ? value : value.name;
                     const [extension] = name.split('.').reverse();
@@ -93,12 +93,12 @@ export default class CreateModelContent extends React.PureComponent<Props> {
                 let groupedFileStatus: boolean = false,
                     csvFileStatus: boolean = false;
 
-                if (Object.keys(grouppedFiles)
-                    .map((key: string) => grouppedFiles[key])
+                if (Object.keys(groupedFiles)
+                    .map((key: string) => groupedFiles[key])
                     .filter((val) => !!val).length == 4) {
                         groupedFileStatus = true;
-                    }                    
-                    
+                    }
+
                 if(!groupedFileStatus && Object.keys(csvGroupFiles)
                     .map((key: string) => csvGroupFiles[key])
                     .filter(val => !!val).length > 1) {
@@ -106,7 +106,7 @@ export default class CreateModelContent extends React.PureComponent<Props> {
                     }
 
                     if(groupedFileStatus) {
-                        createModel(data.name, grouppedFiles, data.global);
+                        createModel(data.name, groupedFiles, data.global);
                     } else if(csvFileStatus) {
                         createModel(data.name, csvGroupFiles, data.global);
                     } else {

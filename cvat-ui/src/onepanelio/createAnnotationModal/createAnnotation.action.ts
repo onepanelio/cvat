@@ -17,16 +17,16 @@ export type CreateAnnotationActions = ActionUnion<typeof createAnnotationAction>
 
 export const createAnnotationAction = {
     openNewAnnotationDialog: (taskInstance: any) => createAction(
-        CreateAnnotationActionTypes.OPEN_NEW_ANNOTATION_DIALOG, { 
+        CreateAnnotationActionTypes.OPEN_NEW_ANNOTATION_DIALOG, {
             taskInstance,
          },
     ),
-    
-    getWorflowTemplatesSuccess: (workflowTemplates: WorkflowTemplates[]) => createAction(
+
+    getWorkflowTemplatesSuccess: (workflowTemplates: WorkflowTemplates[]) => createAction(
         CreateAnnotationActionTypes.GET_WORKFLOW_TEMPLATES_SUCCESS,
         { workflowTemplates }
     ),
-    getWorflowTemplatesError: () => createAction(
+    getWorkflowTemplatesError: () => createAction(
         CreateAnnotationActionTypes.GET_WORKFLOW_TEMPLATES_ERROR,
         { workflowTemplates: [] }
     ),
@@ -79,11 +79,11 @@ export function getWorkflowTemplateAsync(taskInstance: any) : ThunkAction {
                         version: workflow.version == "none" || workflow.version == null ? "0" : workflow.version,
                     }
                 ))
-                dispatch(createAnnotationAction.getWorflowTemplatesSuccess(workflowTemplates));
+                dispatch(createAnnotationAction.getWorkflowTemplatesSuccess(workflowTemplates));
             }
         } catch (e) {
             console.log("Error getting workflow template");
-            dispatch(createAnnotationAction.getWorflowTemplatesError());
+            dispatch(createAnnotationAction.getWorkflowTemplatesError());
         }
     }
 }

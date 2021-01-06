@@ -281,7 +281,7 @@ export function createModelAsync(name: string, files: ModelFiles | CsvModelFiles
         }, data);
 
         try {
-            dispatch(modelsActions.createModelUpdateStatus('Request is beign sent..'));
+            dispatch(modelsActions.createModelUpdateStatus('Request is being sent..'));
             const response = await core.server.request(
                 `${baseURL}/auto_annotation/create`, {
                     method: 'POST',
