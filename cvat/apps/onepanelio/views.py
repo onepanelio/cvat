@@ -166,8 +166,7 @@ def get_model_keys(request):
         return Response({'keys':[]})
 
 
-def upload_annotation_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
-
+def upload_annotation_data(uid, db_task, stamp, dump_format, object_storage_prefix, request):
     project = DatumaroTask.TaskProject.from_task(
         Task.objects.get(pk=uid), db_task.owner.username)
 
@@ -202,12 +201,10 @@ def upload_annotation_data(uid, db_task, stamp, dump_format, cloud_prefix, reque
                 upload_dir = root.replace(tmp_dir, '')
                 if upload_dir.startswith('/'):
                     upload_dir = upload_dir[1:]
-                if not cloud_prefix.endswith('/'):
-                    cloud_prefix += '/'
                 root_file = os.path.join(root, file)
-                ns_cloud_prefix = os.path.join(os.getenv('ONEPANEL_RESOURCE_NAMESPACE') + '/' + cloud_prefix, upload_dir, file)
-                slogger.glob.info('upload_file_debug {} {}'.format(root_file, bucket_name,ns_cloud_prefix))
-                transfer.upload_file(root_file, bucket_name, ns_cloud_prefix)
+                file_object = os.path.join(object_storage_prefix, upload_dir, file)
+                slogger.glob.info('upload_file_debug {} {}'.format(root_file, bucket_name, file_object))
+                transfer.upload_file(root_file, bucket_name, file_object)
 
 
 @api_view(['POST'])
@@ -229,24 +226,17 @@ def create_annotation_model(request, pk):
     time = datetime.now()
     stamp = time.strftime('%m%d%Y%H%M%S')
 
-    # cloud_prefix = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')+ '/annotation-dump/'
+    # dump annotations into object storage
+    annotations_object_storage_prefix = os.getenv('CVAT_ANNOTATIONS_OBJECT_STORAGE_PREFIX') + str(db_task.id) + '/' + stamp + '/'
+    if 'cvat-annotation-path' in all_parameter_names:
+        upload_annotation_data(int(pk), db_task, stamp, form_data['dump_format'], annotations_object_storage_prefix, request)
 
-    # dump training data on cloud
-    # if 'cvat-annotation-path' in form_data['parameters']:
-    annotation_path = 'annotation-dump' + '/' + db_task.name + '/' + stamp + '/'
     if 'cvat-model' in all_parameter_names:
         output_path = os.getenv('ONEPANEL_SYNC_DIRECTORY' ,'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output') + '/' + db_task.name + '/' + form_data['workflow_template'] + '/' + form_data['parameters']['cvat-model']
     else:
         output_path = os.getenv('ONEPANEL_SYNC_DIRECTORY' ,'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output') + '/' + db_task.name + '/' + form_data['workflow_template']
 
-    if 'cvat-annotation-path' in all_parameter_names:
-        upload_annotation_data(int(pk), db_task, stamp, form_data['dump_format'], annotation_path, request)
-
-    time = datetime.now()
-    stamp = time.strftime('%m%d%Y%H%M%S')
-
     configuration = onepanel_authorize(request)
-
     # Enter a context with an instance of the API client
     with onepanel.core.api.ApiClient(configuration) as api_client:
         # Create an instance of the API class
@@ -259,7 +249,7 @@ def create_annotation_model(request, pk):
             params.append(Parameter(name=p_name, value=p_value))
 
         if 'cvat-annotation-path' in all_parameter_names:
-            params.append(Parameter(name='cvat-annotation-path', value=annotation_path))
+            params.append(Parameter(name='cvat-annotation-path', value=annotations_object_storage_prefix))
         if 'cvat-output-path' in all_parameter_names:
             params.append(Parameter(name='cvat-output-path', value=output_path))
         if 'dump-format' in all_parameter_names:
@@ -278,5 +268,6 @@ def create_annotation_model(request, pk):
         except ApiException as e:
             slogger.glob.exception('Exception when calling WorkflowServiceApi->create_workflow_execution: {}\n'.format(e))
             return Response(data='error occurred', status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     return Response(status=status.HTTP_200_OK)
 
