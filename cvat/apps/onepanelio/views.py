@@ -5,19 +5,16 @@
 from __future__ import print_function
 
 import os
-import json
 import yaml
 import tempfile
-from datetime import datetime
+import datetime
 
 from django.http import JsonResponse
-from django.http import HttpResponse, HttpResponseNotFound
 
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view
 
-from cvat.apps.authentication.decorators import login_required
 from cvat.apps.engine import annotation
 from cvat.apps.engine.models import Task as TaskModel
 from cvat.apps.engine.log import slogger
