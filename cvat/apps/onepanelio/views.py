@@ -76,7 +76,7 @@ def get_workflow_templates(request):
     page_size = 100 # int |  (optional)
     page = 1 # int |  (optional)
     try:
-        api_response = api_instance.list_workflow_templates(namespace, page_size=page_size, page=page, labels=os.getenv('ONEPANEL_CVAT_WORKFLOWS_LABEL','key=used-by,value=cvat'))
+        api_response = api_instance.list_workflow_templates(namespace, page_size=page_size, page=page, labels=os.getenv('CVAT_ONEPANEL_WORKFLOWS_LABEL','key=used-by,value=cvat'))
         return JsonResponse(api_response.to_dict())
     except ApiException as e:
         print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
