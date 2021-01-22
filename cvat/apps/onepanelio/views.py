@@ -43,13 +43,13 @@ def authenticate_cloud_storage():
     """ Set appropriate env vars before importing boto3
 
     """
-    with open("/etc/onepanel/artifactRepository") as file:
+    with open('/etc/onepanel/artifactRepository') as file:
         data = yaml.load(file, Loader=yaml.FullLoader)
 
-    with open(os.path.join("/etc/onepanel", data['s3']['accessKeySecret']['key'])) as file:
+    with open(os.path.join('/etc/onepanel', data['s3']['accessKeySecret']['key'])) as file:
         access_key = yaml.load(file, Loader=yaml.FullLoader)
 
-    with open(os.path.join("/etc/onepanel", data['s3']['secretKeySecret']['key'])) as file:
+    with open(os.path.join('/etc/onepanel', data['s3']['secretKeySecret']['key'])) as file:
         secret_key = yaml.load(file, Loader=yaml.FullLoader)
 
     #set env vars
@@ -82,7 +82,7 @@ def get_workflow_templates(request):
         api_response = api_instance.list_workflow_templates(namespace, page_size=page_size, page=page, labels=os.getenv('ONEPANEL_CVAT_WORKFLOWS_LABEL','key=used-by,value=cvat'))
         return JsonResponse(api_response.to_dict())
     except ApiException as e:
-        print("Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n" % e)
+        print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
 
 
 
@@ -109,7 +109,7 @@ def get_workflow_parameters(request):
         public_parameters = [p for p in all_parameters if p['visibility'] == 'public']
         return JsonResponse({'parameters':public_parameters})
     except ApiException as e:
-        print("Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n" % e)
+        print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
 
 @api_view(['POST'])
 def get_node_pool(request):
@@ -124,7 +124,7 @@ def get_node_pool(request):
         api_response = api_instance.get_config()
         return JsonResponse({'node_pool':api_response.to_dict()['node_pool']})
     except ApiException as e:
-        print("Exception when calling ConfigServiceApi->get_config: %s\n" % e)
+        print('Exception when calling ConfigServiceApi->get_config: %s\n' % e)
 
 @api_view(['POST'])
 def get_object_counts(request, pk):
@@ -134,7 +134,7 @@ def get_object_counts(request, pk):
 
 def generate_output_path(uid, pk):
     time = datetime.now()
-    stamp = time.strftime("%m%d%Y%H%M%S")
+    stamp = time.strftime('%m%d%Y%H%M%S')
     db_task = TaskModel.objects.get(pk=pk)
     dir_name = db_task.name + '/' + form_data['uid'] + '/' + stamp
     prefix = os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output')
@@ -143,7 +143,7 @@ def generate_output_path(uid, pk):
 
 def generate_dataset_path(uid, pk):
     time = datetime.now()
-    stamp = time.strftime("%m%d%Y%H%M%S")
+    stamp = time.strftime('%m%d%Y%H%M%S')
     db_task = TaskModel.objects.get(pk=pk)
     dir_name = db_task.name + '/' + stamp
     prefix = 'annotation-dump'
@@ -156,11 +156,11 @@ def get_model_keys(request):
         form_data = request.data
         checkpoints = [i[0] for i in os.walk(os.getenv('CVAT_SHARE_DIR', '/share') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output')) if form_data['uid']+'/' in i[0]]
         if form_data['sysRefModel']:
-            checkpoint_paths = [os.path.join(*[os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')]+c.split("/")[-5:]) for c in checkpoints]
-            checkpoint_path_filtered = [c for c in checkpoint_paths if len(c.split("/")) == 6 and c.startswith(os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')+'/'+os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output')) and form_data['sysRefModel'] in c]
+            checkpoint_paths = [os.path.join(*[os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')]+c.split('/')[-5:]) for c in checkpoints]
+            checkpoint_path_filtered = [c for c in checkpoint_paths if len(c.split('/')) == 6 and c.startswith(os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')+'/'+os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output')) and form_data['sysRefModel'] in c]
         else:
-            checkpoint_paths = [os.path.join(*[os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')]+c.split("/")[-4:]) for c in checkpoints]
-            checkpoint_path_filtered = [c for c in checkpoint_paths if len(c.split("/")) == 5 and c.startswith(os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')+'/'+os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output'))]
+            checkpoint_paths = [os.path.join(*[os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')]+c.split('/')[-4:]) for c in checkpoints]
+            checkpoint_path_filtered = [c for c in checkpoint_paths if len(c.split('/')) == 5 and c.startswith(os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')+'/'+os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output'))]
         checkpoint_path_ordered = [os.getenv('ONEPANEL_RESOURCE_NAMESPACE')+'/' + os.getenv('ONEPANEL_SYNC_DIRECTORY')+'/'+'/'.join(i.split('/')[1:]) for i in checkpoint_path_filtered]
         # since this updated paths (11/27/2020) are corresponding to cloud storage, we cant sort it based on time
         # checkpoint_path_ordered.sort(key=os.path.getmtime, reverse=True)
@@ -180,7 +180,7 @@ def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
     data = DatumaroTask.get_export_formats()
     formats = {d['name']:d['tag'] for d in data}
     if dump_format not in formats.values():
-        dump_format = "cvat_tfrecord"
+        dump_format = 'cvat_tfrecord'
 
     with tempfile.TemporaryDirectory() as test_dir:
         project.export(dump_format, test_dir, save_images=True)
@@ -202,14 +202,14 @@ def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
 
         for root,dirs,files in os.walk(test_dir):
             for file in files:
-                upload_dir = root.replace(test_dir, "")
-                if upload_dir.startswith("/"):
+                upload_dir = root.replace(test_dir, '')
+                if upload_dir.startswith('/'):
                     upload_dir = upload_dir[1:]
-                if not cloud_prefix.endswith("/"):
-                    cloud_prefix += "/"
+                if not cloud_prefix.endswith('/'):
+                    cloud_prefix += '/'
                 root_file = os.path.join(root, file)
                 ns_cloud_prefix = os.path.join(os.getenv('ONEPANEL_RESOURCE_NAMESPACE') + '/' + cloud_prefix, upload_dir, file)
-                slogger.glob.info("upload_file_debug {} {}".format(root_file, bucket_name,ns_cloud_prefix))
+                slogger.glob.info('upload_file_debug {} {}'.format(root_file, bucket_name,ns_cloud_prefix))
                 transfer.upload_file(root_file, bucket_name, ns_cloud_prefix)
 
 
@@ -226,11 +226,11 @@ def create_annotation_model(request, pk):
     num_classes = len(db_labels.values())
 
     form_data = request.data
-    slogger.glob.info("Form data without preprocessing {} {}".format(form_data, type(form_data)))
+    slogger.glob.info('Form data without preprocessing {} {}'.format(form_data, type(form_data)))
 
     # form_args = form_data['arguments']
     time = datetime.now()
-    stamp = time.strftime("%m%d%Y%H%M%S")
+    stamp = time.strftime('%m%d%Y%H%M%S')
 
     # cloud_prefix = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')+ '/annotation-dump/'
 
@@ -246,7 +246,7 @@ def create_annotation_model(request, pk):
         dump_training_data(int(pk), db_task, stamp, form_data['dump_format'], annotation_path, request)
 
     time = datetime.now()
-    stamp = time.strftime("%m%d%Y%H%M%S")
+    stamp = time.strftime('%m%d%Y%H%M%S')
 
     configuration = onepanel_authorize(request)
 
@@ -279,7 +279,7 @@ def create_annotation_model(request, pk):
             api_response = api_instance.create_workflow_execution(namespace, body)
             return Response(data=api_response.to_dict()['metadata'], status=status.HTTP_200_OK)
         except ApiException as e:
-            slogger.glob.exception("Exception when calling WorkflowServiceApi->create_workflow_execution: {}\n".format(e))
-            return Response(data="error occured", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            slogger.glob.exception('Exception when calling WorkflowServiceApi->create_workflow_execution: {}\n'.format(e))
+            return Response(data='error occurred', status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return Response(status=status.HTTP_200_OK)
 
