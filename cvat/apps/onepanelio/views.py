@@ -166,21 +166,21 @@ def get_model_keys(request):
         return Response({'keys':[]})
 
 
-def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
+def upload_annotation_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
 
     project = DatumaroTask.TaskProject.from_task(
         Task.objects.get(pk=uid), db_task.owner.username)
-
-    # read artifactRepository to find out cloud provider and get access for upload
-    endpoint, insecure, bucket_name = authenticate_cloud_storage()
 
     data = DatumaroTask.get_export_formats()
     formats = {d['name']:d['tag'] for d in data}
     if dump_format not in formats.values():
         dump_format = 'cvat_tfrecord'
 
-    with tempfile.TemporaryDirectory() as test_dir:
-        project.export(dump_format, test_dir, save_images=True)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        project.export(dump_format, tmp_dir, save_images=True)
+
+        # read artifactRepository to find out cloud provider and get access for upload
+        endpoint, insecure, bucket_name = authenticate_cloud_storage()
         if endpoint != 's3.amazonaws.com':
             if insecure:
                 endpoint = 'http://' + endpoint
@@ -197,9 +197,9 @@ def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
         )
         transfer = S3Transfer(s3_client, transfer_config)
 
-        for root,dirs,files in os.walk(test_dir):
+        for root,dirs,files in os.walk(tmp_dir):
             for file in files:
-                upload_dir = root.replace(test_dir, '')
+                upload_dir = root.replace(tmp_dir, '')
                 if upload_dir.startswith('/'):
                     upload_dir = upload_dir[1:]
                 if not cloud_prefix.endswith('/'):
@@ -240,7 +240,7 @@ def create_annotation_model(request, pk):
         output_path = os.getenv('ONEPANEL_SYNC_DIRECTORY' ,'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output') + '/' + db_task.name + '/' + form_data['workflow_template']
 
     if 'cvat-annotation-path' in all_parameter_names:
-        dump_training_data(int(pk), db_task, stamp, form_data['dump_format'], annotation_path, request)
+        upload_annotation_data(int(pk), db_task, stamp, form_data['dump_format'], annotation_path, request)
 
     time = datetime.now()
     stamp = time.strftime('%m%d%Y%H%M%S')
