@@ -37,9 +37,6 @@ def onepanel_authorize(request):
     return configuration
 
 def authenticate_cloud_storage():
-    """ Set appropriate env vars before importing boto3
-
-    """
     with open('/etc/onepanel/artifactRepository') as file:
         data = yaml.load(file, Loader=yaml.FullLoader)
 
