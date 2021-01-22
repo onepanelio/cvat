@@ -7,7 +7,7 @@ from __future__ import print_function
 import os
 import yaml
 import tempfile
-import datetime
+from datetime import datetime
 
 from django.http import JsonResponse
 
@@ -16,7 +16,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 
 from cvat.apps.engine import annotation
-from cvat.apps.engine.models import Task as TaskModel
+from cvat.apps.engine.models import Task
 from cvat.apps.engine.log import slogger
 from cvat.apps.onepanelio.models import OnepanelAuth
 import cvat.apps.dataset_manager.task as DatumaroTask
@@ -132,7 +132,7 @@ def get_object_counts(request, pk):
 def generate_output_path(uid, pk):
     time = datetime.now()
     stamp = time.strftime('%m%d%Y%H%M%S')
-    db_task = TaskModel.objects.get(pk=pk)
+    db_task = Task.objects.get(pk=pk)
     dir_name = db_task.name + '/' + form_data['uid'] + '/' + stamp
     prefix = os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output')
     output = prefix + '/' + dir_name + '/'
@@ -141,7 +141,7 @@ def generate_output_path(uid, pk):
 def generate_dataset_path(uid, pk):
     time = datetime.now()
     stamp = time.strftime('%m%d%Y%H%M%S')
-    db_task = TaskModel.objects.get(pk=pk)
+    db_task = Task.objects.get(pk=pk)
     dir_name = db_task.name + '/' + stamp
     prefix = 'annotation-dump'
     output = prefix + '/' + dir_name + '/'
@@ -169,7 +169,7 @@ def get_model_keys(request):
 def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
 
     project = DatumaroTask.TaskProject.from_task(
-        TaskModel.objects.get(pk=uid), db_task.owner.username)
+        Task.objects.get(pk=uid), db_task.owner.username)
 
     # read artifactRepository to find out cloud provider and get access for upload
     endpoint, insecure, bucket_name = authenticate_cloud_storage()
@@ -217,7 +217,7 @@ def create_annotation_model(request, pk):
     """
     global all_parameters
     all_parameter_names = [p['name'] for p in all_parameters]
-    db_task = TaskModel.objects.get(pk=pk)
+    db_task = Task.objects.get(pk=pk)
     db_labels = db_task.label_set.prefetch_related('attributespec_set').all()
     db_labels = {db_label.id:db_label.name for db_label in db_labels}
     num_classes = len(db_labels.values())
