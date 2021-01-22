@@ -208,7 +208,7 @@ def upload_annotation_data(uid, db_task, stamp, dump_format, object_storage_pref
 
 
 @api_view(['POST'])
-def create_annotation_model(request, pk):
+def execute_training_workflow(request, pk):
     """
         Executes workflow selected by User.
     """
