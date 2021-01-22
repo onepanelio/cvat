@@ -144,23 +144,10 @@ def generate_dataset_path(uid, pk):
     output = prefix + '/' + dir_name + '/'
     return Response({'name':output})
 
+
 @api_view(['POST'])
-def get_model_keys(request):
-    try:
-        form_data = request.data
-        checkpoints = [i[0] for i in os.walk(os.getenv('CVAT_SHARE_DIR', '/share') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output')) if form_data['uid']+'/' in i[0]]
-        if form_data['sysRefModel']:
-            checkpoint_paths = [os.path.join(*[os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')]+c.split('/')[-5:]) for c in checkpoints]
-            checkpoint_path_filtered = [c for c in checkpoint_paths if len(c.split('/')) == 6 and c.startswith(os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')+'/'+os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output')) and form_data['sysRefModel'] in c]
-        else:
-            checkpoint_paths = [os.path.join(*[os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')]+c.split('/')[-4:]) for c in checkpoints]
-            checkpoint_path_filtered = [c for c in checkpoint_paths if len(c.split('/')) == 5 and c.startswith(os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data')+'/'+os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR', 'output'))]
-        checkpoint_path_ordered = [os.getenv('ONEPANEL_RESOURCE_NAMESPACE')+'/' + os.getenv('ONEPANEL_SYNC_DIRECTORY')+'/'+'/'.join(i.split('/')[1:]) for i in checkpoint_path_filtered]
-        # since this updated paths (11/27/2020) are corresponding to cloud storage, we cant sort it based on time
-        # checkpoint_path_ordered.sort(key=os.path.getmtime, reverse=True)
-        return Response({'keys':checkpoint_path_ordered})
-    except:
-        return Response({'keys':[]})
+def get_base_model(request):
+    return Response({'keys':[]})
 
 
 def upload_annotation_data(uid, db_task, stamp, dump_format, object_storage_prefix, request):
