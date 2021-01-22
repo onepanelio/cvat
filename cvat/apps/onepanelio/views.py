@@ -228,11 +228,6 @@ def execute_training_workflow(request, pk):
     if 'cvat-annotation-path' in all_parameter_names:
         upload_annotation_data(int(pk), db_task, stamp, form_data['dump_format'], annotations_object_storage_prefix, request)
 
-    if 'cvat-model' in all_parameter_names:
-        output_path = os.getenv('ONEPANEL_SYNC_DIRECTORY' ,'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output') + '/' + db_task.name + '/' + form_data['workflow_template'] + '/' + form_data['parameters']['cvat-model']
-    else:
-        output_path = os.getenv('ONEPANEL_SYNC_DIRECTORY' ,'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output') + '/' + db_task.name + '/' + form_data['workflow_template']
-
     configuration = onepanel_authorize(request)
     # Enter a context with an instance of the API client
     with onepanel.core.api.ApiClient(configuration) as api_client:
@@ -247,11 +242,10 @@ def execute_training_workflow(request, pk):
 
         if 'cvat-annotation-path' in all_parameter_names:
             params.append(Parameter(name='cvat-annotation-path', value=annotations_object_storage_prefix))
-        if 'cvat-output-path' in all_parameter_names:
-            params.append(Parameter(name='cvat-output-path', value=output_path))
         if 'dump-format' in all_parameter_names:
             params.append(Parameter(name='dump-format', value=form_data['dump_format']))
         if 'cvat-num-classes' in all_parameter_names:
+            # TODO: A better way to handle this so Workflow name is not hardcoded
             if form_data['workflow_template'] == 'maskrcnn-training':
                 params.append(Parameter(name='cvat-num-classes', value=str(num_classes+1)))
             else:
