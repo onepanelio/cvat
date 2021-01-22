@@ -4,29 +4,35 @@
 
 from __future__ import print_function
 
-import os, json
+import os
+import json
+import yaml
 import tempfile
+from datetime import datetime
+
 from django.http import JsonResponse
 from django.http import HttpResponse, HttpResponseNotFound
+
 from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.decorators import api_view
 
 from cvat.apps.authentication.decorators import login_required
-from cvat.apps.onepanelio.models import OnepanelAuth
 from cvat.apps.engine import annotation
-import cvat.apps.dataset_manager.task as DatumaroTask
 from cvat.apps.engine.models import Task as TaskModel
 from cvat.apps.engine.log import slogger
-from rest_framework import status
-from datetime import datetime
+from cvat.apps.onepanelio.models import OnepanelAuth
+import cvat.apps.dataset_manager.task as DatumaroTask
+
 import onepanel.core.api
 from onepanel.core.api.rest import ApiException
 from onepanel.core.api.models import Parameter
-from rest_framework.decorators import api_view
-import yaml
+
+import boto3
+from s3transfer import TransferConfig, S3Transfer
 
 def onepanel_authorize(request):
     auth_token = OnepanelAuth.get_auth_token(request)
-    # auth_token = os.getenv('ONEPANEL_AUTHORIZATION')
     configuration = onepanel.core.api.Configuration(
         host = os.getenv('ONEPANEL_API_URL'),
         api_key = { 'authorization': auth_token})
@@ -40,37 +46,17 @@ def authenticate_cloud_storage():
     with open("/etc/onepanel/artifactRepository") as file:
         data = yaml.load(file, Loader=yaml.FullLoader)
 
-    cloud_provider = None
-    if "s3" in list(data.keys()):
-        cloud_provider = "s3"
-    elif "gcs" in list(data.keys()):
-        cloud_provider = "gcs"
-    elif "az" in list(data.keys()):
-        cloud_provider = "az"
+    with open(os.path.join("/etc/onepanel", data['s3']['accessKeySecret']['key'])) as file:
+        access_key = yaml.load(file, Loader=yaml.FullLoader)
 
-    if cloud_provider == "s3":
+    with open(os.path.join("/etc/onepanel", data['s3']['secretKeySecret']['key'])) as file:
+        secret_key = yaml.load(file, Loader=yaml.FullLoader)
 
-        with open(os.path.join("/etc/onepanel", data[cloud_provider]['accessKeySecret']['key'])) as file:
-            access_key = yaml.load(file, Loader=yaml.FullLoader)
+    #set env vars
+    os.environ['AWS_ACCESS_KEY_ID'] = access_key
+    os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
 
-        with open(os.path.join("/etc/onepanel", data[cloud_provider]['secretKeySecret']['key'])) as file:
-            secret_key = yaml.load(file, Loader=yaml.FullLoader)
-
-        #set env vars
-        os.environ['AWS_ACCESS_KEY_ID'] = access_key
-        os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
-
-    elif cloud_provider == "gcs":
-        #set env vars
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join("/etc/onepanel", data[cloud_provider]['serviceAccountKeySecret']['key'])
-
-    elif cloud_provider == "az":
-        pass
-
-    else:
-        raise ValueError("Invalid cloud provider. Should be from ['s3', 'gcs', az']")
-
-    return cloud_provider, data[cloud_provider]['endpoint'], data[cloud_provider]['insecure'], data[cloud_provider]['bucket']
+    return data['s3']['endpoint'], data['s3']['insecure'], data['s3']['bucket']
 
 @api_view(['POST'])
 def get_available_dump_formats(request):
@@ -189,7 +175,7 @@ def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
         TaskModel.objects.get(pk=uid), db_task.owner.username)
 
     # read artifactRepository to find out cloud provider and get access for upload
-    cloud_provider, endpoint, insecure, bucket_name = authenticate_cloud_storage()
+    endpoint, insecure, bucket_name = authenticate_cloud_storage()
 
     data = DatumaroTask.get_export_formats()
     formats = {d['name']:d['tag'] for d in data}
@@ -197,65 +183,34 @@ def dump_training_data(uid, db_task, stamp, dump_format, cloud_prefix, request):
         dump_format = "cvat_tfrecord"
 
     with tempfile.TemporaryDirectory() as test_dir:
-
         project.export(dump_format, test_dir, save_images=True)
-
-        if cloud_provider == "s3":
-
-            import boto3
-            from botocore.exceptions import ClientError
-            from botocore.client import Config
-            from s3transfer import TransferConfig, S3Transfer
-
-            if endpoint != 's3.amazonaws.com':
-                if insecure:
-                    endpoint = 'http://' + endpoint
-                else:
-                    endpoint = 'https://' + endpoint
-                s3_client = boto3.client('s3', endpoint_url=endpoint)
+        if endpoint != 's3.amazonaws.com':
+            if insecure:
+                endpoint = 'http://' + endpoint
             else:
-                s3_client = boto3.client('s3')
-
-            transfer_config = TransferConfig(
-                multipart_threshold=9999999999999999,
-                max_concurrency=10,
-                num_download_attempts=10,
-            )
-            transfer = S3Transfer(s3_client, transfer_config)
-
-            for root,dirs,files in os.walk(test_dir):
-                for file in files:
-                    upload_dir = root.replace(test_dir, "")
-                    if upload_dir.startswith("/"):
-                        upload_dir = upload_dir[1:]
-                    if not cloud_prefix.endswith("/"):
-                        cloud_prefix += "/"
-                    root_file = os.path.join(root, file)
-                    ns_cloud_prefix = os.path.join(os.getenv('ONEPANEL_RESOURCE_NAMESPACE') + '/' + cloud_prefix, upload_dir, file)
-                    slogger.glob.info("upload_file_debug {} {}".format(root_file, bucket_name,ns_cloud_prefix))
-                    transfer.upload_file(root_file, bucket_name, ns_cloud_prefix)
-
-        elif cloud_provider == "gcs":
-            from google.cloud import storage
-            storage_client = storage.Client()
-            bucket = storage_client.bucket(bucket_name)
-
-            for root, dirs, files in os.walk(test_dir):
-                for file in files:
-                    upload_dir = root.replace(test_dir, "")
-                    if upload_dir.startswith("/"):
-                        upload_dir = upload_dir[1:]
-                    if not cloud_prefix.endswith("/"):
-                        cloud_prefix += "/"
-                    blob = bucket.blob(os.path.join(os.getenv('ONEPANEL_RESOURCE_NAMESPACE') + '/'+cloud_prefix, upload_dir, file))
-                    blob.upload_from_filename(os.path.join(root, file))
-
-        elif cloud_provider == "az":
-            pass
-
+                endpoint = 'https://' + endpoint
+            s3_client = boto3.client('s3', endpoint_url=endpoint)
         else:
-            raise ValueError("Invalid cloud provider! Should be from ['s3','gcs','az']")
+            s3_client = boto3.client('s3')
 
+        transfer_config = TransferConfig(
+            multipart_threshold=9999999999999999,
+            max_concurrency=10,
+            num_download_attempts=10,
+        )
+        transfer = S3Transfer(s3_client, transfer_config)
+
+        for root,dirs,files in os.walk(test_dir):
+            for file in files:
+                upload_dir = root.replace(test_dir, "")
+                if upload_dir.startswith("/"):
+                    upload_dir = upload_dir[1:]
+                if not cloud_prefix.endswith("/"):
+                    cloud_prefix += "/"
+                root_file = os.path.join(root, file)
+                ns_cloud_prefix = os.path.join(os.getenv('ONEPANEL_RESOURCE_NAMESPACE') + '/' + cloud_prefix, upload_dir, file)
+                slogger.glob.info("upload_file_debug {} {}".format(root_file, bucket_name,ns_cloud_prefix))
+                transfer.upload_file(root_file, bucket_name, ns_cloud_prefix)
 
 
 @api_view(['POST'])
