@@ -115,7 +115,7 @@ def get_workflow_parameters(request):
         api_instance = onepanel.core.api.WorkflowTemplateServiceApi(api_client)
         namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')  # str |
     try:
-        api_response = api_instance.get_workflow_template2(namespace, uid=form_data['uid'], version=form_data['version'])
+        api_response = api_instance.get_workflow_template(namespace, uid=form_data['uid'])
         all_parameters = api_response.to_dict()['parameters']
         public_parameters = [p for p in all_parameters if p['visibility'] == 'public']
         return JsonResponse({'parameters': public_parameters})

@@ -52,5 +52,4 @@ av==6.2.0
 patool==1.12
 boto3
 opencv-contrib-python
-onepanel-sdk==0.15.0
-google-cloud-storage
+onepanel-sdk==0.17.0
