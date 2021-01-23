@@ -26,6 +26,7 @@ from onepanel.core.api.rest import ApiException
 from onepanel.core.api.models import Parameter
 
 import boto3
+import botocore
 from s3transfer import TransferConfig, S3Transfer
 
 def onepanel_authorize(request):
@@ -36,7 +37,7 @@ def onepanel_authorize(request):
     configuration.api_key_prefix['authorization'] = 'Bearer'
     return configuration
 
-def authenticate_cloud_storage():
+def create_s3_client():
     with open('/etc/onepanel/artifactRepository') as file:
         data = yaml.load(file, Loader=yaml.FullLoader)
 
@@ -46,11 +47,24 @@ def authenticate_cloud_storage():
     with open(os.path.join('/etc/onepanel', data['s3']['secretKeySecret']['key'])) as file:
         secret_key = yaml.load(file, Loader=yaml.FullLoader)
 
-    #set env vars
+    # set env vars
     os.environ['AWS_ACCESS_KEY_ID'] = access_key
     os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
 
-    return data['s3']['endpoint'], data['s3']['insecure'], data['s3']['bucket']
+    endpoint = data['s3']['endpoint']
+    insecure = data['s3']['insecure']
+    bucket_name = data['s3']['bucket']
+
+    if endpoint != 's3.amazonaws.com':
+        if insecure:
+            endpoint = 'http://' + endpoint
+        else:
+            endpoint = 'https://' + endpoint
+        s3_client = boto3.client('s3', endpoint_url=endpoint)
+    else:
+        s3_client = boto3.client('s3')
+
+    return s3_client, bucket_name
 
 @api_view(['POST'])
 def get_available_dump_formats(request):
@@ -150,12 +164,21 @@ def get_base_model(request):
     return Response({'keys':[]})
 
 
-def upload_annotation_data(uid, db_task, stamp, dump_format, object_storage_prefix, request):
+def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
+    s3_client, bucket_name = create_s3_client()
+
+    if 'cvat-finetune-checkpoint' in form_data['parameters']:
+        try:
+            s3_client.head_object(Bucket=bucket_name, Key=form_data['parameters']['cvat-finetune-checkpoint'])
+        except:
+            raise
+
     project = DatumaroTask.TaskProject.from_task(
         Task.objects.get(pk=uid), db_task.owner.username)
 
     data = DatumaroTask.get_export_formats()
     formats = {d['name']:d['tag'] for d in data}
+    dump_format = form_data['dump_format']
     if dump_format not in formats.values():
         dump_format = 'cvat_tfrecord'
 
@@ -163,16 +186,6 @@ def upload_annotation_data(uid, db_task, stamp, dump_format, object_storage_pref
         project.export(dump_format, tmp_dir, save_images=True)
 
         # read artifactRepository to find out cloud provider and get access for upload
-        endpoint, insecure, bucket_name = authenticate_cloud_storage()
-        if endpoint != 's3.amazonaws.com':
-            if insecure:
-                endpoint = 'http://' + endpoint
-            else:
-                endpoint = 'https://' + endpoint
-            s3_client = boto3.client('s3', endpoint_url=endpoint)
-        else:
-            s3_client = boto3.client('s3')
-
         transfer_config = TransferConfig(
             multipart_threshold=9999999999999999,
             max_concurrency=10,
@@ -213,7 +226,10 @@ def execute_training_workflow(request, pk):
     # dump annotations into object storage
     annotations_object_storage_prefix = os.getenv('CVAT_ANNOTATIONS_OBJECT_STORAGE_PREFIX') + str(db_task.id) + '/' + stamp + '/'
     if 'cvat-annotation-path' in all_parameter_names:
-        upload_annotation_data(int(pk), db_task, stamp, form_data['dump_format'], annotations_object_storage_prefix, request)
+        try:
+            upload_annotation_data(int(pk), db_task, form_data, annotations_object_storage_prefix)
+        except botocore.exceptions.ClientError:
+            return Response(data='Checkpoint path does not exist in object storage.', status=status.HTTP_404_NOT_FOUND)
 
     configuration = onepanel_authorize(request)
     # Enter a context with an instance of the API client
@@ -223,7 +239,7 @@ def execute_training_workflow(request, pk):
         namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE') # str |
         params = []
         for p_name, p_value in form_data['parameters'].items():
-            if p_name in ['cvat-annotation-path','cvat-output-path']:
+            if p_name in ['cvat-annotation-path', 'cvat-output-path']:
                 continue
             params.append(Parameter(name=p_name, value=p_value))
 
