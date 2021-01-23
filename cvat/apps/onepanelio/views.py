@@ -115,7 +115,7 @@ def get_workflow_parameters(request):
         api_response = api_instance.get_workflow_template2(namespace, uid=form_data['uid'], version=form_data['version'])
         all_parameters = api_response.to_dict()['parameters']
         public_parameters = [p for p in all_parameters if p['visibility'] == 'public']
-        return JsonResponse({'parameters':public_parameters})
+        return JsonResponse({'parameters': public_parameters})
     except ApiException as e:
         print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
 
@@ -130,7 +130,7 @@ def get_node_pool(request):
 
     try:
         api_response = api_instance.get_config()
-        return JsonResponse({'node_pool':api_response.to_dict()['node_pool']})
+        return JsonResponse({'node_pool': api_response.to_dict()['node_pool']})
     except ApiException as e:
         print('Exception when calling ConfigServiceApi->get_config: %s\n' % e)
 
@@ -147,7 +147,7 @@ def generate_output_path(uid, pk):
     dir_name = db_task.name + '/' + form_data['uid'] + '/' + stamp
     prefix = os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output')
     output = prefix + '/' + dir_name + '/'
-    return Response({'name':output})
+    return Response({'name': output})
 
 def generate_dataset_path(uid, pk):
     time = datetime.now()
@@ -156,7 +156,7 @@ def generate_dataset_path(uid, pk):
     dir_name = db_task.name + '/' + stamp
     prefix = 'annotation-dump'
     output = prefix + '/' + dir_name + '/'
-    return Response({'name':output})
+    return Response({'name': output})
 
 
 @api_view(['POST'])
