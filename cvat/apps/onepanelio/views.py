@@ -175,10 +175,9 @@ def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
     s3_client, bucket_name = create_s3_client()
 
     if 'cvat-finetune-checkpoint' in form_data['parameters']:
-        try:
-            s3_client.head_object(Bucket=bucket_name, Key=form_data['parameters']['cvat-finetune-checkpoint'])
-        except:
-            raise
+        results = s3_client.list_objects(Bucket=bucket_name, Prefix=form_data['parameters']['cvat-finetune-checkpoint'])
+        if not 'Contents' in results:
+            raise botocore.exceptions.ClientError(error_response={'Error': {}}, operation_name=None)
 
     project = DatumaroTask.TaskProject.from_task(
         Task.objects.get(pk=uid), db_task.owner.username)
