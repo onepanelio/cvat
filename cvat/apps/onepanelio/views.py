@@ -193,8 +193,9 @@ def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
         project.export(dump_format, tmp_dir, save_images=True)
 
         # read artifactRepository to find out cloud provider and get access for upload
+        TB = 1024 ** 4
         transfer_config = TransferConfig(
-            multipart_threshold=9999999999999999,
+            multipart_threshold=1*TB,
             max_concurrency=10,
             num_download_attempts=10,
         )
