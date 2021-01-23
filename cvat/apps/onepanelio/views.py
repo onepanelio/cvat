@@ -29,6 +29,7 @@ import boto3
 import botocore
 from s3transfer import TransferConfig, S3Transfer
 
+
 def onepanel_authorize(request):
     auth_token = OnepanelAuth.get_auth_token(request)
     configuration = onepanel.core.api.Configuration(
@@ -36,6 +37,7 @@ def onepanel_authorize(request):
         api_key = { 'authorization': auth_token})
     configuration.api_key_prefix['authorization'] = 'Bearer'
     return configuration
+
 
 def create_s3_client():
     with open('/etc/onepanel/artifactRepository') as file:
@@ -66,6 +68,7 @@ def create_s3_client():
 
     return s3_client, bucket_name
 
+
 @api_view(['POST'])
 def get_available_dump_formats(request):
     data = DatumaroTask.get_export_formats()
@@ -73,6 +76,7 @@ def get_available_dump_formats(request):
     for d in data:
         formats.append({'name':d['name'], 'tag':d['tag']})
     return JsonResponse({'dump_formats': formats})
+
 
 @api_view(['POST'])
 def get_workflow_templates(request):
@@ -91,7 +95,6 @@ def get_workflow_templates(request):
         return JsonResponse(api_response.to_dict())
     except ApiException as e:
         print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
-
 
 
 @api_view(['POST'])
@@ -119,6 +122,7 @@ def get_workflow_parameters(request):
     except ApiException as e:
         print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
 
+
 @api_view(['POST'])
 def get_node_pool(request):
     configuration = onepanel_authorize(request)
@@ -134,11 +138,13 @@ def get_node_pool(request):
     except ApiException as e:
         print('Exception when calling ConfigServiceApi->get_config: %s\n' % e)
 
+
 @api_view(['POST'])
 def get_object_counts(request, pk):
     # db_task = self.get_object()
     data = annotation.get_task_data_custom(pk, request.user)
     return Response(data)
+
 
 def generate_output_path(uid, pk):
     time = datetime.now()
@@ -148,6 +154,7 @@ def generate_output_path(uid, pk):
     prefix = os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output')
     output = prefix + '/' + dir_name + '/'
     return Response({'name': output})
+
 
 def generate_dataset_path(uid, pk):
     time = datetime.now()
@@ -264,4 +271,3 @@ def execute_training_workflow(request, pk):
             return Response(data='error occurred', status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response(status=status.HTTP_200_OK)
-
