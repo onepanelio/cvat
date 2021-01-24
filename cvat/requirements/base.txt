@@ -52,4 +52,4 @@ av==6.2.0
 patool==1.12
 boto3
 opencv-contrib-python
-onepanel-sdk==0.17.0
+onepanel-sdk==0.16.0
