@@ -6,7 +6,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('get_workflow_templates', views.get_workflow_templates),
+    path('workflow_templates', views.list_workflow_templates),
+    path('workflow_templates/<slug:workflow_template_uid>/versions', views.list_workflow_template_versions),
+    path('workflow_templates/<slug:workflow_template_uid>/versions/<slug:version>', views.get_workflow_template),
     path('get_node_pool', views.get_node_pool),
     path('get_object_counts/<int:pk>', views.get_object_counts),
     path('get_base_model', views.get_base_model),

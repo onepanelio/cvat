@@ -10,7 +10,7 @@ import ModelNewAnnotationModalComponent from './createAnnotation.component';
 import {
     CombinedState,
 } from 'reducers/interfaces';
-import {WorkflowTemplates} from './interfaces';
+import { WorkflowTemplate } from './interfaces';
 import {
     createAnnotationAction,
     getBaseModelsAsync,
@@ -21,7 +21,7 @@ interface StateToProps {
     taskInstance: any;
     visible: boolean;
     baseModelList: string[];
-    workflowTemplates: WorkflowTemplates[];
+    workflowTemplates: WorkflowTemplate[];
     fetchingWorkflowTemplates: boolean;
 }
 

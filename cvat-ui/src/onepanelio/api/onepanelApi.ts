@@ -1,5 +1,5 @@
 import getCore from 'cvat-core-wrapper';
-import { WorkflowTemplates } from "../createAnnotationModal/interfaces";
+import { WorkflowTemplate, WorkflowTemplates } from "../createAnnotationModal/interfaces";
 
 const core = getCore();
 const baseUrl = core.config.backendAPI.slice(0, -7);
@@ -14,10 +14,28 @@ export const OnepanelApi = {
         });
     },
 
-    async getWorkflowParameters(data: WorkflowTemplates) {
-        return core.server.request(`${baseUrl}/onepanelio/get_workflow_parameters`, {
+    async listWorkflowTemplateVersions(workflowTemplateUid: string) {
+        return core.server.request(`${baseUrl}/onepanelio/workflow_templates/${workflowTemplateUid}/versions`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    },
+
+    async getWorkflowTemplate(workflowTemplateUid: string, version: string = '0') {
+        return core.server.request(`${baseUrl}/onepanelio/workflow_templates/${workflowTemplateUid}/versions/${version}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    },
+
+    async executeWorkflow(taskInstanceId: string, payload: any) {
+        return core.server.request(`${baseUrl}/onepanelio/execute_workflow/${taskInstanceId}`, {
             method: 'POST',
-            data,
+            data: payload,
             headers: {
                 'Content-Type': 'application/json',
             },

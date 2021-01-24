@@ -77,24 +77,52 @@ def get_available_dump_formats(request):
         formats.append({'name':d['name'], 'tag':d['tag']})
     return JsonResponse({'dump_formats': formats})
 
+@api_view(['GET'])
+def list_workflow_templates(request):
+    configuration = onepanel_authorize(request)
+   
+    with onepanel.core.api.ApiClient(configuration) as api_client:
+        api_instance = onepanel.core.api.WorkflowTemplateServiceApi(api_client)
+        namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')
+        labels = os.getenv('ONEPANEL_CVAT_WORKFLOWS_LABEL','key=used-by,value=cvat')
+        page_size = 100
+        page = 1
 
-@api_view(['POST'])
-def get_workflow_templates(request):
+        try:
+            api_response = api_instance.list_workflow_templates(namespace, page_size=page_size, page=page, labels=labels)
+            return JsonResponse(api_response.to_dict())
+        except ApiException as e:
+            print("Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n" % e)
 
+
+@api_view(['GET'])
+def list_workflow_template_versions(request, workflow_template_uid):
     configuration = onepanel_authorize(request)
 
-    # Enter a context with an instance of the API client
     with onepanel.core.api.ApiClient(configuration) as api_client:
-        # Create an instance of the API class
         api_instance = onepanel.core.api.WorkflowTemplateServiceApi(api_client)
-        namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')  # str |
-    page_size = 100 # int |  (optional)
-    page = 1 # int |  (optional)
-    try:
-        api_response = api_instance.list_workflow_templates(namespace, page_size=page_size, page=page, labels=os.getenv('CVAT_ONEPANEL_WORKFLOWS_LABEL','key=used-by,value=cvat'))
-        return JsonResponse(api_response.to_dict())
-    except ApiException as e:
-        print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
+        namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')
+
+        try:
+            api_response = api_instance.list_workflow_template_versions(namespace, workflow_template_uid)
+            return JsonResponse(api_response.to_dict())
+        except ApiException as e:
+            print("Exception when calling WorkflowTemplateServiceApi->list_workflow_template_versions %s\n" % e)
+
+@api_view(['GET'])
+def get_workflow_template(request, workflow_template_uid, version):
+    configuration = onepanel_authorize(request)
+
+    with onepanel.core.api.ApiClient(configuration) as api_client:
+        api_instance = onepanel.core.api.WorkflowTemplateServiceApi(api_client)
+        namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')
+
+        try:
+            api_response = api_instance.get_workflow_template2(namespace, uid=workflow_template_uid, version=version)
+
+            return JsonResponse(api_response.to_dict())
+        except ApiException as e:
+            print("Exception when calling WorkflowTemplateServiceApi->get_workflow_template: %s\n" % e)
 
 
 @api_view(['POST'])
@@ -216,11 +244,9 @@ def execute_training_workflow(request, pk):
     """
         Executes workflow selected by User.
     """
-    # TODO: All parameters should come from POST data, not a global
-    global all_parameters
-    all_parameter_names = [p['name'] for p in all_parameters]
-
-    db_task = Task.objects.get(pk=pk)
+    parameters = request.data['parameters']
+    all_parameter_names = parameters.keys()
+    db_task = TaskModel.objects.get(pk=pk)
     db_labels = db_task.label_set.prefetch_related('attributespec_set').all()
     db_labels = {db_label.id:db_label.name for db_label in db_labels}
     num_classes = len(db_labels.values())

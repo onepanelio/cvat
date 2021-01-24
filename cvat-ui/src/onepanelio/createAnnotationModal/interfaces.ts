@@ -19,20 +19,10 @@ export type ActionUnion<A extends ActionCreatorsMapObject> = ReturnType<A[keyof 
 export type ThunkAction<R = void, A extends Action = AnyAction>
     = _ThunkAction<R, CombinedState, {}, A>;
 
-export interface WorkflowTemplates {
+export interface WorkflowTemplate {
     uid: string;
     version: string;
     name: string;
-}
-
-export interface WorkflowParameters {
-    type: string;
-    name: string;
-    value: string;
-    required: boolean | null;
-    options: any;
-    hint: string | null;
-    display_name: string | null;
 }
 
 export interface NodePoolResponse {
@@ -62,5 +52,4 @@ export interface DumpFormats {
 export interface ExecuteWorkflowPayload {
     workflow_template: string;
     parameters: any;
-    dump_format: string | null;
 }
