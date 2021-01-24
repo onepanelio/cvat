@@ -104,6 +104,7 @@ def get_workflow_parameters(request):
 
     """
     # read workflow_uid and workflow_version from request payload
+    # TODO: Do not rely on globals
     global all_parameters
     form_data = request.data
 
@@ -207,7 +208,6 @@ def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
                     upload_dir = upload_dir[1:]
                 root_file = os.path.join(root, file)
                 file_object = os.path.join(object_storage_prefix, upload_dir, file)
-                slogger.glob.info('upload_file_debug {} {}'.format(root_file, bucket_name, file_object))
                 transfer.upload_file(root_file, bucket_name, file_object)
 
 
@@ -216,8 +216,10 @@ def execute_training_workflow(request, pk):
     """
         Executes workflow selected by User.
     """
+    # TODO: All parameters should come from POST data, not a global
     global all_parameters
     all_parameter_names = [p['name'] for p in all_parameters]
+
     db_task = Task.objects.get(pk=pk)
     db_labels = db_task.label_set.prefetch_related('attributespec_set').all()
     db_labels = {db_label.id:db_label.name for db_label in db_labels}
@@ -246,7 +248,7 @@ def execute_training_workflow(request, pk):
         namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE') # str |
         params = []
         for p_name, p_value in form_data['parameters'].items():
-            if p_name in ['cvat-annotation-path', 'cvat-output-path']:
+            if p_name in ['cvat-annotation-path']:
                 continue
             params.append(Parameter(name=p_name, value=p_value))
 
@@ -255,11 +257,11 @@ def execute_training_workflow(request, pk):
         if 'dump-format' in all_parameter_names:
             params.append(Parameter(name='dump-format', value=form_data['dump_format']))
         if 'cvat-num-classes' in all_parameter_names:
-            # TODO: A better way to handle this so Workflow name is not hardcoded
-            if form_data['workflow_template'] == 'maskrcnn-training':
-                params.append(Parameter(name='cvat-num-classes', value=str(num_classes+1)))
-            else:
-                params.append(Parameter(name='cvat-num-classes', value=str(num_classes)))
+            if 'cvat-num-classes-addend' in all_parameter_names:
+                # TODO: Grab this from form_data once we fix the UI
+                num_classes_addend = next((p for p in all_parameters if p['name'] == 'cvat-num-classes-addend'), None)
+                num_classes += int(num_classes_addend['value'])
+            params.append(Parameter(name='cvat-num-classes', value=str(num_classes)))
 
         body = onepanel.core.api.CreateWorkflowExecutionBody(parameters=params,
         workflow_template_uid = form_data['workflow_template'], labels=[{'key':'workspace-uid','value':os.getenv('ONEPANEL_RESOURCE_UID')},{'key':'cvat-job-id','value':str(pk)}])
