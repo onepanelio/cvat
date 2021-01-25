@@ -33,8 +33,8 @@ from s3transfer import TransferConfig, S3Transfer
 def onepanel_authorize(request):
     auth_token = OnepanelAuth.get_auth_token(request)
     configuration = onepanel.core.api.Configuration(
-        host = os.getenv('ONEPANEL_API_URL'),
-        api_key = { 'authorization': auth_token})
+        host=os.getenv('ONEPANEL_API_URL'),
+        api_key={'authorization': auth_token})
     configuration.api_key_prefix['authorization'] = 'Bearer'
     return configuration
 
@@ -74,22 +74,24 @@ def get_available_dump_formats(request):
     data = DatumaroTask.get_export_formats()
     formats = []
     for d in data:
-        formats.append({'name':d['name'], 'tag':d['tag']})
+        formats.append({'name': d['name'], 'tag': d['tag']})
     return JsonResponse({'dump_formats': formats})
+
 
 @api_view(['GET'])
 def list_workflow_templates(request):
     configuration = onepanel_authorize(request)
-   
+
     with onepanel.core.api.ApiClient(configuration) as api_client:
         api_instance = onepanel.core.api.WorkflowTemplateServiceApi(api_client)
         namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')
-        labels = os.getenv('ONEPANEL_CVAT_WORKFLOWS_LABEL','key=used-by,value=cvat')
+        labels = os.getenv('ONEPANEL_CVAT_WORKFLOWS_LABEL', 'key=used-by,value=cvat')
         page_size = 100
         page = 1
 
         try:
-            api_response = api_instance.list_workflow_templates(namespace, page_size=page_size, page=page, labels=labels)
+            api_response = api_instance.list_workflow_templates(namespace, page_size=page_size, page=page,
+                                                                labels=labels)
             return JsonResponse(api_response.to_dict())
         except ApiException as e:
             print("Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n" % e)
@@ -109,6 +111,7 @@ def list_workflow_template_versions(request, workflow_template_uid):
         except ApiException as e:
             print("Exception when calling WorkflowTemplateServiceApi->list_workflow_template_versions %s\n" % e)
 
+
 @api_view(['GET'])
 def get_workflow_template(request, workflow_template_uid, version):
     configuration = onepanel_authorize(request)
@@ -123,33 +126,6 @@ def get_workflow_template(request, workflow_template_uid, version):
             return JsonResponse(api_response.to_dict())
         except ApiException as e:
             print("Exception when calling WorkflowTemplateServiceApi->get_workflow_template: %s\n" % e)
-
-
-@api_view(['POST'])
-def get_workflow_parameters(request):
-    """This function should return a list/dict of parameters for selected workflow.
-    Additionally, use default values to pre-populate fields.
-
-    """
-    # read workflow_uid and workflow_version from request payload
-    # TODO: Do not rely on globals
-    global all_parameters
-    form_data = request.data
-
-    configuration = onepanel_authorize(request)
-
-    # Enter a context with an instance of the API client
-    with onepanel.core.api.ApiClient(configuration) as api_client:
-        # Create an instance of the API class
-        api_instance = onepanel.core.api.WorkflowTemplateServiceApi(api_client)
-        namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')  # str |
-    try:
-        api_response = api_instance.get_workflow_template(namespace, uid=form_data['uid'])
-        all_parameters = api_response.to_dict()['parameters']
-        public_parameters = [p for p in all_parameters if p['visibility'] == 'public']
-        return JsonResponse({'parameters': public_parameters})
-    except ApiException as e:
-        print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
 
 
 @api_view(['POST'])
@@ -180,7 +156,8 @@ def generate_output_path(uid, pk):
     stamp = time.strftime('%m%d%Y%H%M%S')
     db_task = Task.objects.get(pk=pk)
     dir_name = db_task.name + '/' + form_data['uid'] + '/' + stamp
-    prefix = os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR','output')
+    prefix = os.getenv('ONEPANEL_SYNC_DIRECTORY', 'workflow-data') + '/' + os.getenv('ONEPANEL_WORKFLOW_MODEL_DIR',
+                                                                                     'output')
     output = prefix + '/' + dir_name + '/'
     return Response({'name': output})
 
@@ -197,14 +174,16 @@ def generate_dataset_path(uid, pk):
 
 @api_view(['POST'])
 def get_base_model(request):
-    return Response({'keys':[]})
+    return Response({'keys': []})
 
 
 def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
     s3_client, bucket_name = create_s3_client()
 
-    if 'cvat-finetune-checkpoint' in form_data['parameters']:
-        results = s3_client.list_objects(Bucket=bucket_name, Prefix=form_data['parameters']['cvat-finetune-checkpoint'])
+    parameters = form_data['parameters']
+    cvat_finetune_checkpoint = parameters['cvat-finetune-checkpoint']
+    if cvat_finetune_checkpoint != '':
+        results = s3_client.list_objects(Bucket=bucket_name, Prefix=cvat_finetune_checkpoint)
         if not 'Contents' in results:
             raise botocore.exceptions.ClientError(error_response={'Error': {}}, operation_name=None)
 
@@ -212,8 +191,8 @@ def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
         Task.objects.get(pk=uid), db_task.owner.username)
 
     data = DatumaroTask.get_export_formats()
-    formats = {d['name']:d['tag'] for d in data}
-    dump_format = form_data['dump_format']
+    formats = {d['name']: d['tag'] for d in data}
+    dump_format = parameters['dump-format']
     if dump_format not in formats.values():
         dump_format = 'cvat_tfrecord'
 
@@ -223,13 +202,13 @@ def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
         # read artifactRepository to find out cloud provider and get access for upload
         TB = 1024 ** 4
         transfer_config = TransferConfig(
-            multipart_threshold=1*TB,
+            multipart_threshold=1 * TB,
             max_concurrency=10,
             num_download_attempts=10,
         )
         transfer = S3Transfer(s3_client, transfer_config)
 
-        for root,dirs,files in os.walk(tmp_dir):
+        for root, dirs, files in os.walk(tmp_dir):
             for file in files:
                 upload_dir = root.replace(tmp_dir, '')
                 if upload_dir.startswith('/'):
@@ -244,26 +223,27 @@ def execute_training_workflow(request, pk):
     """
         Executes workflow selected by User.
     """
-    parameters = request.data['parameters']
-    all_parameter_names = parameters.keys()
-    db_task = TaskModel.objects.get(pk=pk)
-    db_labels = db_task.label_set.prefetch_related('attributespec_set').all()
-    db_labels = {db_label.id:db_label.name for db_label in db_labels}
-    num_classes = len(db_labels.values())
-
     form_data = request.data
     slogger.glob.info('Form data without preprocessing {} {}'.format(form_data, type(form_data)))
 
-    # form_args = form_data['arguments']
+    parameters = form_data['parameters']
+    workflow_template_uid = form_data['workflow_template']
+
+    db_task = Task.objects.get(pk=pk)
+    db_labels = db_task.label_set.prefetch_related('attributespec_set').all()
+    db_labels = {db_label.id: db_label.name for db_label in db_labels}
+    num_classes = len(db_labels.values())
+
     time = datetime.now()
     stamp = time.strftime('%m%d%Y%H%M%S')
 
     # dump annotations into object storage
-    annotations_object_storage_prefix = os.getenv('CVAT_ANNOTATIONS_OBJECT_STORAGE_PREFIX') + str(db_task.id) + '/' + stamp + '/'
-    if 'cvat-annotation-path' in all_parameter_names:
+    annotations_object_storage_prefix = os.getenv('CVAT_ANNOTATIONS_OBJECT_STORAGE_PREFIX') + str(
+        db_task.id) + '/' + stamp + '/'
+    if 'cvat-annotation-path' in parameters:
         try:
             upload_annotation_data(int(pk), db_task, form_data, annotations_object_storage_prefix)
-        except botocore.exceptions.ClientError:
+        except botocore.exceptions.ClientError as e:
             return Response(data='Checkpoint path does not exist in object storage.', status=status.HTTP_404_NOT_FOUND)
 
     configuration = onepanel_authorize(request)
@@ -271,31 +251,35 @@ def execute_training_workflow(request, pk):
     with onepanel.core.api.ApiClient(configuration) as api_client:
         # Create an instance of the API class
         api_instance = onepanel.core.api.WorkflowServiceApi(api_client)
-        namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE') # str |
+        namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')
         params = []
-        for p_name, p_value in form_data['parameters'].items():
+        for p_name, p_value in parameters.items():
             if p_name in ['cvat-annotation-path']:
                 continue
             params.append(Parameter(name=p_name, value=p_value))
 
-        if 'cvat-annotation-path' in all_parameter_names:
+        if 'cvat-annotation-path' in parameters:
             params.append(Parameter(name='cvat-annotation-path', value=annotations_object_storage_prefix))
-        if 'dump-format' in all_parameter_names:
+        if 'dump-format' in parameters:
             params.append(Parameter(name='dump-format', value=form_data['dump_format']))
-        if 'cvat-num-classes' in all_parameter_names:
-            if 'cvat-num-classes-addend' in all_parameter_names:
+        if 'cvat-num-classes' in parameters:
+            if 'cvat-num-classes-addend' in parameters:
                 # TODO: Grab this from form_data once we fix the UI
                 num_classes_addend = next((p for p in all_parameters if p['name'] == 'cvat-num-classes-addend'), None)
                 num_classes += int(num_classes_addend['value'])
             params.append(Parameter(name='cvat-num-classes', value=str(num_classes)))
 
         body = onepanel.core.api.CreateWorkflowExecutionBody(parameters=params,
-        workflow_template_uid = form_data['workflow_template'], labels=[{'key': 'workspace-uid', 'value': os.getenv('ONEPANEL_RESOURCE_UID')}, {'key': 'cvat-job-id', 'value': str(pk)}])
+                                                             workflow_template_uid=workflow_template_uid,
+                                                             labels=[{'key': 'workspace-uid',
+                                                                      'value': os.getenv('ONEPANEL_RESOURCE_UID')},
+                                                                     {'key': 'cvat-job-id', 'value': str(pk)}])
         try:
             api_response = api_instance.create_workflow_execution(namespace, body)
             return Response(data=api_response.to_dict()['metadata'], status=status.HTTP_200_OK)
         except ApiException as e:
-            slogger.glob.exception('Exception when calling WorkflowServiceApi->create_workflow_execution: {}\n'.format(e))
+            slogger.glob.exception(
+                'Exception when calling WorkflowServiceApi->create_workflow_execution: {}\n'.format(e))
             return Response(data='error occurred', status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response(status=status.HTTP_200_OK)

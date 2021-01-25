@@ -21,10 +21,13 @@ const { TextArea } = Input;
 import getCore from 'cvat-core-wrapper';
 const core = getCore();
 
-import { WorkflowParameter } from '../common/workflowParameter';
 import { WorkflowTemplate, ExecuteWorkflowPayload, DefaultSysParams } from './interfaces';
 import { OnepanelApi } from "../api/onepanelApi";
-import { Parameters, ParameterValues } from '../components/parameters';
+import { Parameters, ParameterValues, ParameterChangeEvent } from '../components/parameters';
+import { SelectParameter } from '../components/selectParameter';
+import { TextAreaParameter } from '../components/textareaParameter';
+import { TextInputParameter } from '../components/textinputParamter';
+import { WorkflowParameter } from '../common/workflowParameter';
 
 interface Props {
     visible: boolean;
@@ -64,6 +67,7 @@ const InitialState = {
     selectedFinetuneCheckpoint: undefined,
     showDumpFormatHint: false,
     submitEnabled: true,
+    parameterValues: {},
 }
 
 export default class ModelNewAnnotationModalComponent extends React.PureComponent<Props, State> {
@@ -72,7 +76,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         this.state = InitialState;
 
         this.onWorkflowTemplateChange = this.onWorkflowTemplateChange.bind(this);
-        this.handleParameterValuesChange = this.handleParameterValuesChange.bind(this);
+        this.handleParameterChange = this.handleParameterChange.bind(this);
     }
 
     public componentDidUpdate(prevProps: Props, prevState: State): void {
@@ -172,7 +176,6 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         let finalPayload: ExecuteWorkflowPayload = {
             workflow_template: selectedWorkflowTemplate.uid,
             parameters: selectedWorkflowParam,
-            // dump_format: selectedDumpFormat!.tag || null,
         }
 
         if (sysAnnotationPath) {
@@ -272,8 +275,32 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         }
     }
 
+    private handleParameterChange(event: ParameterChangeEvent) {
+        const parameterMap = { ...this.state.selectedWorkflowParam };
+        parameterMap[event.parameter.name] = event.value;
+
+        this.setState(prevState => {
+            const parameterMap = { ...prevState.selectedWorkflowParam };
+            parameterMap[event.parameter.name] = event.value;
+
+            return {
+                selectedWorkflowParam: parameterMap
+            }
+        });
+    }
+
     private renderModelSelector(): JSX.Element {
         const { workflowTemplates } = this.props;
+        const { workflowParameters, selectedWorkflowParam } = this.state;
+        const parameterMap = selectedWorkflowParam;
+
+        const formattedParameters = [];
+        for(const parameter of workflowParameters) {
+            formattedParameters.push({
+                ...parameter,
+                type: parameter.type ? parameter.type.toLocaleLowerCase() : 'input.text'
+            });
+        }
 
         return (
             <React.Fragment>
@@ -296,10 +323,46 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                     </Col>
                 </Row>
 
-                <Parameters 
-                    parameters={this.state.workflowParameters} 
-                    handleParameterValuesChange={this.handleParameterValuesChange}
-                />
+                {
+                    formattedParameters.map( (parameter, index) => (
+                        <Row type='flex' align='middle' key={index}>
+                            <Col span={24}>
+                            {
+                                parameter.type === "input.text" &&
+                                    <TextInputParameter 
+                                        parameter={parameter}
+                                        value={parameterMap[parameter.name]}
+                                        onChange={this.handleParameterChange}
+                                    />
+                            }
+                            {
+                                parameter.type === "textarea.textarea" &&
+                                    <TextAreaParameter 
+                                        parameter={parameter}
+                                        value={parameterMap[parameter.name]}
+                                        onChange={this.handleParameterChange}
+                                    />
+                            }
+                            {
+                                (parameter.type === "select.select" || parameter.type === "select.nodepool" ) && 
+                                <SelectParameter 
+                                    parameter={parameter} 
+                                    value={parameterMap[parameter.name]}
+                                    onChange={this.handleParameterChange}
+                                />
+                            }
+                            {
+                                parameter.hint ?
+                                    <div
+                                        style={{ fontSize: "12px", marginLeft: "10px", color: "#716f6f" }}
+                                        dangerouslySetInnerHTML={{__html: parameter.hint}}
+                                    ></div> :
+                                    null
+                            }
+                            </Col>
+                        </Row>
+                    ))
+                }
 
                 {
                     this.state.sysAnnotationPath.value ?
@@ -442,11 +505,5 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                 Visit this url for more information: <a href={url} target='_blank'>{url}</a>
             </div>
         )
-    }
-
-    private handleParameterValuesChange(values: ParameterValues): void {
-        this.setState({
-                selectedWorkflowParam: values
-        });
     }
 }
