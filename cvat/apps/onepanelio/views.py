@@ -263,10 +263,6 @@ def execute_training_workflow(request, pk):
         if 'dump-format' in parameters:
             params.append(Parameter(name='dump-format', value=form_data['dump_format']))
         if 'cvat-num-classes' in parameters:
-            if 'cvat-num-classes-addend' in parameters:
-                # TODO: Grab this from form_data once we fix the UI
-                num_classes_addend = next((p for p in all_parameters if p['name'] == 'cvat-num-classes-addend'), None)
-                num_classes += int(num_classes_addend['value'])
             params.append(Parameter(name='cvat-num-classes', value=str(num_classes)))
 
         body = onepanel.core.api.CreateWorkflowExecutionBody(parameters=params,
