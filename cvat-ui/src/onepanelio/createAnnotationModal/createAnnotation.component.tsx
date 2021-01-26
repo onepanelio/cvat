@@ -108,7 +108,6 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                     size="small"
                     onClick={() => {
                         notification.close(key);
-                        closeDialog();
                     }}
                 >
                     cancel
@@ -127,18 +126,16 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         );
         if (count == 0) {
             notification.open({
-                message: 'Are you sure?',
-                description: `There aren’t any annotations in this task.
-                If you workflow depends on this data it may throw an error. Do you want to continue?`,
+                message: 'No annotations in this task',
+                description: `If your training Workflow depends on this data, it may throw an error. Are you sure you want to continue?`,
                 duration: 0,
                 btn,
                 key,
             });
         } else if (count < 100) {
             notification.open({
-                message: 'Are you sure?',
-                description: `Number of annotations is less than 100.
-                Deep learning models work better with large datasets. Are you sure you want to continue?`,
+                message: 'Number of annotations is less than 100',
+                description: `Deep learning models work better with large datasets. Are you sure you want to continue?`,
                 duration: 0,
                 btn,
                 key,
