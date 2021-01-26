@@ -261,7 +261,7 @@ def execute_training_workflow(request, pk):
         if 'cvat-annotation-path' in parameters:
             params.append(Parameter(name='cvat-annotation-path', value=annotations_object_storage_prefix))
         if 'dump-format' in parameters:
-            params.append(Parameter(name='dump-format', value=form_data['dump_format']))
+            params.append(Parameter(name='dump-format', value=parameters['dump-format']))
         if 'cvat-num-classes' in parameters:
             params.append(Parameter(name='cvat-num-classes', value=str(num_classes)))
 
