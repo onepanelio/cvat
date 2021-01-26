@@ -42,10 +42,10 @@ interface State {
     selectedWorkflowTemplate?: WorkflowTemplate;
     workflowParameters: WorkflowParameter[];
     selectedWorkflowParam: ParameterValues;
-    sysAnnotationPath: DefaultSysParams;
     selectedFinetuneCheckpoint?: string;
     showDumpFormatHint: boolean;
     submitEnabled: boolean;
+    cancelEnabled: boolean;
 }
 
 const InitialState = {
@@ -55,14 +55,10 @@ const InitialState = {
     selectedWorkflowTemplate: undefined,
     workflowParameters: [],
     selectedWorkflowParam: {},
-    sysAnnotationPath: {
-        hint: null,
-        display_name: "",
-        value: ""
-    },
     selectedFinetuneCheckpoint: undefined,
     showDumpFormatHint: false,
     submitEnabled: false,
+    cancelEnabled: true,
     parameterValues: {},
 }
 
@@ -86,6 +82,10 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
     private async handleSubmit(): Promise<void> {
         const { taskInstance } = this.props;
 
+        this.setState({
+            cancelEnabled: false,
+        });
+
         const {
             shapes,
             tracks,
@@ -99,8 +99,13 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
     }
 
     private onSubmitNotifications(count: number): void {
-        const { closeDialog } = this.props;
         const key = `open${Date.now()}`;
+        const onClose = () => {
+            this.setState({
+                cancelEnabled: true,
+            });
+        };
+
         const btn = (
             <div className="cvat-new-anno-modal-submit-notification-btn">
                 <Button
@@ -108,9 +113,10 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                     size="small"
                     onClick={() => {
                         notification.close(key);
+                        onClose();
                     }}
                 >
-                    cancel
+                    Cancel
                 </Button>
                 <Button
                     type="primary"
@@ -124,21 +130,26 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                 </Button>
             </div>
         );
+
+    
         if (count == 0) {
-            notification.open({
-                message: 'No annotations in this task',
-                description: `If your training Workflow depends on this data, it may throw an error. Are you sure you want to continue?`,
-                duration: 0,
-                btn,
-                key,
-            });
-        } else if (count < 100) {
             notification.open({
                 message: 'Number of annotations is less than 100',
                 description: `Deep learning models work better with large datasets. Are you sure you want to continue?`,
                 duration: 0,
                 btn,
                 key,
+                onClose
+            });
+        } else if (count < 100) {
+            notification.open({
+                message: 'Are you sure?',
+                description: `Number of annotations is less than 100.
+                Deep learning models work better with large datasets. Are you sure you want to continue?`,
+                duration: 0,
+                btn,
+                key,
+                onClose
             });
         } else {
             this.onExecuteWorkflow();
@@ -153,7 +164,6 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         const {
             selectedWorkflowTemplate,
             selectedWorkflowParam,
-            sysAnnotationPath,
         } = this.state;
 
         if (!selectedWorkflowTemplate) {
@@ -164,15 +174,12 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
 
         this.setState({
             submittingWorkflow: true,
+            cancelEnabled: false
         })
 
         let finalPayload: ExecuteWorkflowPayload = {
             workflow_template: selectedWorkflowTemplate.uid,
             parameters: selectedWorkflowParam,
-        }
-
-        if (sysAnnotationPath) {
-            finalPayload.parameters["cvat-annotation-path"] = sysAnnotationPath.value;
         }
 
         try {
@@ -184,11 +191,16 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                 description: this.ExecuteSuccessMessage(selectedWorkflowTemplate.uid, successResp.url)
             });
 
+            this.setState({
+                cancelEnabled: true,
+            });
+
             closeDialog();
         } catch (e) {
             this.setState({
                 submittingWorkflow: false,
-                submitEnabled: true
+                submitEnabled: true,
+                cancelEnabled: true
             });
 
             notification.error({
@@ -204,11 +216,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
             return;
         }
 
-        const {
-            taskInstance,
-            workflowTemplates,
-        } = this.props;
-
+        const { workflowTemplates } = this.props;
         const data = workflowTemplates.find(workflow => workflow.uid === value)
         // WorkflowTemplate not found by input value
         if(!data) {
@@ -223,42 +231,17 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
 
         try {
             const workflowTemplate = await OnepanelApi.getWorkflowTemplate(value);
-            const parameters = workflowTemplate.parameters.filter( (parameter: WorkflowParameter) => parameter.visibility === 'public');
 
-            let workflowParamsArr = parameters, workflowParamNameValue = {};
-            const sysAnnotationPath = parameters.find((param: WorkflowParameter) => param.name === "cvat-annotation-path");
-
-            if (sysAnnotationPath) {
-                const sysAnnotationPathResp = await OnepanelApi.getAnnotationPath(taskInstance.id, data.uid);
-                this.setState({
-                    sysAnnotationPath: {
-                        display_name: sysAnnotationPath.display_name ? sysAnnotationPath.display_name : sysAnnotationPath.name,
-                        hint: sysAnnotationPath.hint,
-                        value: sysAnnotationPathResp.name
-                    }
-                });
-            } else {
-                this.setState({
-                    sysAnnotationPath: InitialState.sysAnnotationPath
-                })
+            const workflowParamNameValue: { [key: string]: any } = {};
+            for (const param of workflowTemplate.parameters) {
+                workflowParamNameValue[param.name] = param.value;
             }
-
-            workflowParamsArr = parameters.filter((param: WorkflowParameter) => {
-                if (param.name !== "cvat-annotation-path") {
-                    workflowParamNameValue = {
-                        ...workflowParamNameValue,
-                        [param.name]: param.value
-                    }
-                    return true;
-                }
-                return false;
-            });
 
             this.setState({
                 gettingParameters: false,
                 submitEnabled: true,
-                workflowParameters: workflowParamsArr,
-                selectedWorkflowParam: { ...workflowParamNameValue },
+                workflowParameters: workflowTemplate.parameters,
+                selectedWorkflowParam: workflowParamNameValue,
             });
         } catch (error) {
             this.showErrorNotification(error);
@@ -292,6 +275,10 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
 
         const formattedParameters = [];
         for(const parameter of workflowParameters) {
+            if (parameter.visibility !== 'public') {
+                continue;
+            }
+
             formattedParameters.push({
                 ...parameter,
                 type: parameter.type ? parameter.type.toLocaleLowerCase() : 'input.text'
@@ -324,7 +311,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                         <Row type='flex' align='middle' key={index}>
                             <Col span={24}>
                             {
-                                parameter.type === "input.text" &&
+                                parameter.type.startsWith('input.') &&
                                     <TextInputParameter 
                                         parameter={parameter}
                                         value={parameterMap[parameter.name]}
@@ -358,33 +345,6 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                             </Col>
                         </Row>
                     ))
-                }
-
-                {
-                    this.state.sysAnnotationPath.value ?
-                        <Row type='flex' align='middle'>
-                            <Col span={24}>
-                                <label className='cvat-text-color ant-form-item-label'>{this.state.sysAnnotationPath.display_name}:</label>
-                                <TextArea
-                                    autoSize={{ minRows: 1, maxRows: 4 }}
-                                    value={this.state.sysAnnotationPath.value || ""}
-                                    onChange={(event) => this.setState({
-                                        sysAnnotationPath: {
-                                            ...this.state.sysAnnotationPath,
-                                            value: event.target.value
-                                        }
-                                    })}
-                                />
-                                {
-                                    this.state.sysAnnotationPath.hint ?
-                                        <div
-                                            style={{ fontSize: "12px", marginLeft: "10px", color: "#716f6f" }}
-                                            dangerouslySetInnerHTML={{__html: this.state.sysAnnotationPath.hint}}
-                                        ></div> :
-                                        null
-                                }
-                            </Col>
-                        </Row> : null
                 }
             </React.Fragment>
         );
@@ -449,11 +409,11 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         }
 
         const footerButtons = [
-            <Button key="back" onClick={(): void => {
+            <Button key="back" disabled={!this.state.cancelEnabled} onClick={(): void => {
                 this.setState(InitialState);
                 closeDialog();
             }}>
-                Close
+                Cancel
             </Button>,
             <Button key="submit" type="primary" disabled={!this.state.submitEnabled} onClick={(): void => {
                 this.setState({
@@ -464,7 +424,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                     submitEnabled: checkSubmitEnable()
                 })
             }}>
-                Submit
+                Execute Workflow
             </Button>,
         ]
         return [

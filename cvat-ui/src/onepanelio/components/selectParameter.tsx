@@ -39,9 +39,14 @@ export class SelectParameter extends React.PureComponent<Props, State> {
     public render(): JSX.Element {
         const { parameter, value } = this.props;
 
+        let placeholder = parameter.display_name;
+        if (!placeholder || placeholder == '') {
+            placeholder = parameter.name;
+        }
+
         return (
             <div>
-                <label className='cvat-text-color ant-form-item-label'>{ parameter.display_name ? parameter.display_name : parameter.name }:</label>
+                <label className='cvat-text-color ant-form-item-label'>{placeholder}:</label>
                 {
                     <Select
                         placeholder={parameter.display_name ? parameter.display_name : ''}

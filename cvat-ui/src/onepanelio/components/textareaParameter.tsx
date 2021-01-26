@@ -33,20 +33,27 @@ export class TextAreaParameter extends React.PureComponent<Props, State> {
     public render(): JSX.Element {
         const { parameter, value } = this.props;
 
+        let placeholder = parameter.display_name;
+        if (!placeholder || placeholder == '') {
+            placeholder = parameter.name;
+        }
+
         return (
-            <TextArea
-                autoSize={{ minRows: 5, maxRows: 5 }}
-                name={parameter.name}
-                value={value}
-                placeholder={parameter.display_name ? parameter.display_name : ''}
-                onChange={(event: any) => {
-                    this.handleParameterChange({
-                        parameter,
-                        value: event.target.value,
-                        source: event,
-                    });
-                }}
-            />
+            <div>
+                <label className='cvat-text-color ant-form-item-label'>{placeholder}:</label>
+                <TextArea
+                    autoSize={{ minRows: 5, maxRows: 5 }}
+                    name={parameter.name}
+                    value={value}
+                    onChange={(event: any) => {
+                        this.handleParameterChange({
+                            parameter,
+                            value: event.target.value,
+                            source: event,
+                        });
+                    }}
+                />
+            </div>
         )
     }
 }

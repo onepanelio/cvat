@@ -67,8 +67,7 @@ export const OnepanelApi = {
 
     async getAnnotationPath(id: string, workflowTemplateUid: string) {
         return core.server.request(`${baseUrl}/onepanelio/get_annotation_path/${id}`, {
-            method: 'POST',
-            data: { uid: workflowTemplateUid },
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             },

@@ -33,19 +33,35 @@ export class TextInputParameter extends React.PureComponent<Props, State> {
     public render(): JSX.Element {
         const { parameter, value } = this.props;
 
+        let placeholder = parameter.display_name;
+        if (!placeholder || placeholder == '') {
+            placeholder = parameter.name;
+        }
+
+        let inputType = 'text';
+        if (parameter.type !== 'input.text') {
+            const typeParts = parameter.type.split('.');
+            if (typeParts.length > 1) {
+                inputType = typeParts[1];
+            }
+        }
+
         return (
-            <Input
-                name={parameter.name}
-                value={value}
-                placeholder={parameter.display_name ? parameter.display_name : ''}
-                onChange={(event: any) => {
-                    this.handleParameterChange({
-                        parameter,
-                        value: event.target.value,
-                        source: event,
-                    });
-                }}
-            />
+            <div>
+              <label className='cvat-text-color ant-form-item-label'>{placeholder}:</label>
+              <Input
+                    name={parameter.name}
+                    value={value}
+                    type={inputType}
+                    onChange={(event: any) => {
+                        this.handleParameterChange({
+                            parameter,
+                            value: event.target.value,
+                            source: event,
+                        });
+                    }}
+                />
+            </div>
         )
     }
 }

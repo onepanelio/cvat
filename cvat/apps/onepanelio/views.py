@@ -162,6 +162,7 @@ def generate_output_path(uid, pk):
     return Response({'name': output})
 
 
+@api_view(['GET'])
 def generate_dataset_path(uid, pk):
     time = datetime.now()
     stamp = time.strftime('%m%d%Y%H%M%S')
@@ -244,7 +245,7 @@ def execute_training_workflow(request, pk):
         try:
             upload_annotation_data(int(pk), db_task, form_data, annotations_object_storage_prefix)
         except botocore.exceptions.ClientError as e:
-            return Response(data='Checkpoint path does not exist in object storage.', status=status.HTTP_404_NOT_FOUND)
+            return JsonResponse({'message':'Checkpoint path does not exist in object storage.'}, status=status.HTTP_404_NOT_FOUND)
 
     configuration = onepanel_authorize(request)
     # Enter a context with an instance of the API client
@@ -254,14 +255,12 @@ def execute_training_workflow(request, pk):
         namespace = os.getenv('ONEPANEL_RESOURCE_NAMESPACE')
         params = []
         for p_name, p_value in parameters.items():
-            if p_name in ['cvat-annotation-path']:
+            if p_name in ['cvat-annotation-path', 'cvat-num-classes']:
                 continue
             params.append(Parameter(name=p_name, value=p_value))
 
         if 'cvat-annotation-path' in parameters:
             params.append(Parameter(name='cvat-annotation-path', value=annotations_object_storage_prefix))
-        if 'dump-format' in parameters:
-            params.append(Parameter(name='dump-format', value=parameters['dump-format']))
         if 'cvat-num-classes' in parameters:
             params.append(Parameter(name='cvat-num-classes', value=str(num_classes)))
 
