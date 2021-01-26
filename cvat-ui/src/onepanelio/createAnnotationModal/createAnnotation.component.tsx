@@ -17,13 +17,9 @@ import {
 } from 'antd';
 
 const { TextArea } = Input;
-
-import getCore from 'cvat-core-wrapper';
-const core = getCore();
-
 import { WorkflowTemplate, ExecuteWorkflowPayload, DefaultSysParams } from './interfaces';
 import { OnepanelApi } from "../api/onepanelApi";
-import { Parameters, ParameterValues, ParameterChangeEvent } from '../components/parameters';
+import { ParameterValues, ParameterChangeEvent } from '../components/parameters';
 import { SelectParameter } from '../components/selectParameter';
 import { TextAreaParameter } from '../components/textareaParameter';
 import { TextInputParameter } from '../components/textinputParamter';
@@ -66,7 +62,7 @@ const InitialState = {
     },
     selectedFinetuneCheckpoint: undefined,
     showDumpFormatHint: false,
-    submitEnabled: true,
+    submitEnabled: false,
     parameterValues: {},
 }
 
@@ -225,6 +221,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         this.setState({
             selectedWorkflowTemplate: data,
             gettingParameters: true,
+            submitEnabled: false
         })
 
         try {
@@ -262,6 +259,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
 
             this.setState({
                 gettingParameters: false,
+                submitEnabled: true,
                 workflowParameters: workflowParamsArr,
                 selectedWorkflowParam: { ...workflowParamNameValue },
             });
@@ -271,6 +269,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                 isLoading: false,
                 submittingWorkflow: false,
                 gettingParameters: false,
+                submitEnabled: true,
             });
         }
     }
@@ -437,8 +436,15 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         }
 
         const checkSubmitEnable = () => {
-            // If we are executing, don't allow them to submit it again.
-            if(this.state.submittingWorkflow) {
+            if (this.props.fetchingWorkflowTemplates) {
+                return false;
+            }
+
+            if (this.state.gettingParameters) {
+                return false;
+            }
+
+            if (this.state.submittingWorkflow) {
                 return false;
             }
 
