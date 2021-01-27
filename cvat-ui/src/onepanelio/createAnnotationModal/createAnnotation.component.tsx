@@ -186,7 +186,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
             let successResp = await OnepanelApi.executeWorkflow(taskInstance.id, finalPayload);
         
             notification.open({
-                message: 'Execute Workflow',
+                message: 'Training Workflow is running',
                 duration: 0,
                 description: this.ExecuteSuccessMessage(selectedWorkflowTemplate.uid, successResp.url)
             });
@@ -206,7 +206,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
             notification.error({
                 message: 'Error',
                 duration: 0,
-                description: 'There was an error executing the workflow'
+                description: 'There was an error executing the training Workflow'
             });
         }
     }
@@ -454,7 +454,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
     // ---- TODO error methods and notifications
     private showErrorNotification = (error: any): void => {
         notification.error({
-            message: 'Execute Workflow failed.',
+            message: 'Failed to execute Workflow',
             description: `Execute workflow failed (Error code: ${error.code}). Please try again later`,
             duration: 5,
         });
@@ -463,9 +463,10 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
     private ExecuteSuccessMessage(name: string, url: string): JSX.Element {
         return (
             <div>
-                {name} workflow has been executed. Please check the workflow for logs.
-                <br />
-                Visit this url for more information: <a href={url} target='_blank'>{url}</a>
+                <div class="workflow-executed-message">
+                    Training Workflow <strong>{name}</strong> is running.
+                </div>
+                <Button type="primary" ghost href={url} target='_blank'>Open Workflow details</Button>
             </div>
         )
     }
