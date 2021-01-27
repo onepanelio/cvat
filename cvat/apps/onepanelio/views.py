@@ -193,7 +193,7 @@ def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
 
     data = DatumaroTask.get_export_formats()
     formats = {d['name']: d['tag'] for d in data}
-    dump_format = parameters['dump-format']
+    dump_format = parameters.get('dump-format', '')
     if dump_format not in formats.values():
         dump_format = 'cvat_tfrecord'
 
