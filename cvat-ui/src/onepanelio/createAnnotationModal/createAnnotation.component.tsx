@@ -16,7 +16,6 @@ import {
     Spin
 } from 'antd';
 
-const { TextArea } = Input;
 import { WorkflowTemplate, ExecuteWorkflowPayload, DefaultSysParams } from './interfaces';
 import { OnepanelApi } from "../api/onepanelApi";
 import { ParameterValues, ParameterChangeEvent } from '../components/parameters';
@@ -37,6 +36,7 @@ interface Props {
 
 interface State {
     isLoading: boolean,
+    confirmingSubmitWorkflow: boolean;
     submittingWorkflow: boolean;
     gettingParameters: boolean;
     selectedWorkflowTemplate?: WorkflowTemplate;
@@ -51,6 +51,7 @@ interface State {
 const InitialState = {
     isLoading: true,
     submittingWorkflow: false,
+    confirmingSubmitWorkflow: false,
     gettingParameters: false,
     selectedWorkflowTemplate: undefined,
     workflowParameters: [],
@@ -80,11 +81,16 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
     }
 
     private async handleSubmit(): Promise<void> {
-        const { taskInstance } = this.props;
+        if (this.state.confirmingSubmitWorkflow) {
+            return;
+        }
 
         this.setState({
-            cancelEnabled: false,
+            submitEnabled: false,
+            confirmingSubmitWorkflow: true
         });
+
+        const { taskInstance } = this.props;
 
         const {
             shapes,
@@ -103,13 +109,14 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         const onClose = () => {
             this.setState({
                 cancelEnabled: true,
+                submitEnabled: true,
+                confirmingSubmitWorkflow: false
             });
         };
 
         const btn = (
-            <div className="cvat-new-anno-modal-submit-notification-btn">
+            <div className="cvat-new-anno-modal-submit-notification-btn fix-ant-spacing">
                 <Button
-                    type="primary"
                     size="small"
                     onClick={() => {
                         notification.close(key);
@@ -121,6 +128,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                 <Button
                     type="primary"
                     size="small"
+                    className="fix-ant-spacing"
                     onClick={() => {
                         this.onExecuteWorkflow();
                         notification.close(key);
@@ -131,7 +139,6 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
             </div>
         );
 
-    
         if (count == 0) {
             notification.open({
                 message: 'Number of annotations is less than 100',
@@ -140,6 +147,10 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                 btn,
                 key,
                 onClose
+            });
+
+            this.setState({
+                cancelEnabled: false
             });
         } else if (count < 100) {
             notification.open({
@@ -151,30 +162,39 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                 key,
                 onClose
             });
+
+
+            this.setState({
+                cancelEnabled: false
+            });
         } else {
             this.onExecuteWorkflow();
         }
     }
 
     private async onExecuteWorkflow(): Promise<void> {
+        if (this.state.submittingWorkflow) {
+            return;
+        }
+
         const {
             taskInstance,
             closeDialog,
         } = this.props;
+
         const {
             selectedWorkflowTemplate,
             selectedWorkflowParam,
         } = this.state;
 
         if (!selectedWorkflowTemplate) {
-
-            // TODO error
             return;
         }
 
         this.setState({
             submittingWorkflow: true,
-            cancelEnabled: false
+            submitEnabled: false,
+            confirmingSubmitWorkflow: false
         })
 
         let finalPayload: ExecuteWorkflowPayload = {
@@ -188,17 +208,21 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
             notification.open({
                 message: 'Training Workflow is running',
                 duration: 0,
-                description: this.ExecuteSuccessMessage(selectedWorkflowTemplate.uid, successResp.url)
+                description: this.executeSuccessMessage(selectedWorkflowTemplate.uid, successResp.url)
             });
 
             this.setState({
+                submittingWorkflow: false,
+                confirmingSubmitWorkflow: false,
                 cancelEnabled: true,
+                submitEnabled: true
             });
 
             closeDialog();
         } catch (e) {
             this.setState({
                 submittingWorkflow: false,
+                confirmingSubmitWorkflow: false,
                 submitEnabled: true,
                 cancelEnabled: true
             });
@@ -392,37 +416,19 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
             )
         }
 
-        const checkSubmitEnable = () => {
-            if (this.props.fetchingWorkflowTemplates) {
-                return false;
-            }
-
-            if (this.state.gettingParameters) {
-                return false;
-            }
-
-            if (this.state.submittingWorkflow) {
-                return false;
-            }
-
-            return true;
-        }
-
         const footerButtons = [
             <Button key="back" disabled={!this.state.cancelEnabled} onClick={(): void => {
+                if (!this.state.cancelEnabled) {
+                    return;
+                }
+                
                 this.setState(InitialState);
                 closeDialog();
             }}>
-                Cancel
+                Close
             </Button>,
             <Button key="submit" type="primary" disabled={!this.state.submitEnabled} onClick={(): void => {
-                this.setState({
-                    submitEnabled: checkSubmitEnable()
-                })
                 this.handleSubmit();
-                this.setState({
-                    submitEnabled: checkSubmitEnable()
-                })
             }}>
                 Execute Workflow
             </Button>,
@@ -451,7 +457,6 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         );
     }
 
-    // ---- TODO error methods and notifications
     private showErrorNotification = (error: any): void => {
         notification.error({
             message: 'Failed to execute Workflow',
@@ -460,10 +465,10 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
         });
     }
 
-    private ExecuteSuccessMessage(name: string, url: string): JSX.Element {
-        return (
+    private executeSuccessMessage(name: string, url: string): JSX.Element {
+        return (            
             <div>
-                <div class="workflow-executed-message">
+                <div className="workflow-executed-message">
                     Training Workflow <strong>{name}</strong> is running.
                 </div>
                 <Button type="primary" ghost href={url} target='_blank'>Open Workflow details</Button>
