@@ -182,7 +182,7 @@ def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
     s3_client, bucket_name = create_s3_client()
 
     parameters = form_data['parameters']
-    cvat_finetune_checkpoint = parameters['cvat-finetune-checkpoint']
+    cvat_finetune_checkpoint = parameters.get('cvat-finetune-checkpoint', '')
     if cvat_finetune_checkpoint != '':
         results = s3_client.list_objects(Bucket=bucket_name, Prefix=cvat_finetune_checkpoint)
         if not 'Contents' in results:
