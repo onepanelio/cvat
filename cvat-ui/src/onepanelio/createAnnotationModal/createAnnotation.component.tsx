@@ -219,7 +219,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
             });
 
             closeDialog();
-        } catch (e) {
+        } catch (e) {     
             this.setState({
                 submittingWorkflow: false,
                 confirmingSubmitWorkflow: false,
@@ -227,10 +227,16 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                 cancelEnabled: true
             });
 
+            let description = 'There was an error executing the training Workflow';
+
+            if (e.data.message) {
+                description = e.data.message;
+            }
+
             notification.error({
                 message: 'Error',
                 duration: 0,
-                description: 'There was an error executing the training Workflow'
+                description: description
             });
         }
     }
