@@ -94,7 +94,7 @@ def list_workflow_templates(request):
                                                                 labels=labels)
             return JsonResponse(api_response.to_dict())
         except ApiException as e:
-            print("Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n" % e)
+            print('Exception when calling WorkflowTemplateServiceApi->list_workflow_templates: %s\n' % e)
 
 
 @api_view(['GET'])
@@ -109,7 +109,7 @@ def list_workflow_template_versions(request, workflow_template_uid):
             api_response = api_instance.list_workflow_template_versions(namespace, workflow_template_uid)
             return JsonResponse(api_response.to_dict())
         except ApiException as e:
-            print("Exception when calling WorkflowTemplateServiceApi->list_workflow_template_versions %s\n" % e)
+            print('Exception when calling WorkflowTemplateServiceApi->list_workflow_template_versions %s\n' % e)
 
 
 @api_view(['GET'])
@@ -234,9 +234,8 @@ def execute_training_workflow(request, pk):
     checkpoint_path = parameters.get('cvat-finetune-checkpoint', '')
     if checkpoint_path:
         results = s3_client.list_objects(Bucket=bucket_name, Prefix=checkpoint_path)
-        parameters['cvat-finetune-checkpoint'] = "'{checkpoint}'".format(checkpoint=checkpoint_path)
         if not 'Contents' in results:
-            return JsonResponse({'message':'Checkpoint path does not exist in object storage.'}, status=status.HTTP_404_NOT_FOUND)
+            return JsonResponse({'message': 'Checkpoint path does not exist in object storage.'}, status=status.HTTP_404_NOT_FOUND)
 
     # dump annotations into object storage
     annotations_object_storage_prefix = os.getenv('CVAT_ANNOTATIONS_OBJECT_STORAGE_PREFIX') + str(
