@@ -1,10 +1,52 @@
 import getCore from 'cvat-core-wrapper';
-import { WorkflowTemplates } from "../createAnnotationModal/interfaces";
 
 const core = getCore();
 const baseUrl = core.config.backendAPI.slice(0, -7);
 
 export const OnepanelApi = {
+    checkStatus(response: any) {
+        if (response.status >= 200 && response.status < 400) {
+            return response;
+        }
+
+        return response.text()
+                .then( (text: any) => {
+                    let data = '';
+                    if (text) {
+                        data = JSON.parse(text);
+                    }
+                    
+                    throw {
+                        status: response.status,
+                        statusText: response.statusText,
+                        data,
+                        response
+                    }
+                })
+    },
+
+    async fetchJson(url: string, options: any) {
+        let headers = {
+            'Content-Type': 'application/json',
+        };
+    
+        if (options && options.headers) {
+            headers = {...options.headers, ...headers};
+            delete options.headers;
+        }
+    
+        return fetch(url, Object.assign({
+            credentials: 'same-origin',
+            headers: headers,
+        }, options))
+            .then(OnepanelApi.checkStatus)
+            .then(response => {
+                // decode JSON, but avoid problems with empty responses
+                return response.text()
+                    .then( (text: any) => text ? JSON.parse(text) : '')
+            });
+    },
+
     async getNodePool() {
         return core.server.request(`${baseUrl}/onepanelio/get_node_pool`, {
             method: 'POST',
@@ -14,13 +56,28 @@ export const OnepanelApi = {
         });
     },
 
-    async getWorkflowParameters(data: WorkflowTemplates) {
-        return core.server.request(`${baseUrl}/onepanelio/get_workflow_parameters`, {
-            method: 'POST',
-            data,
+    async listWorkflowTemplateVersions(workflowTemplateUid: string) {
+        return core.server.request(`${baseUrl}/onepanelio/workflow_templates/${workflowTemplateUid}/versions`, {
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             },
+        });
+    },
+
+    async getWorkflowTemplate(workflowTemplateUid: string, version: string = '0') {
+        return core.server.request(`${baseUrl}/onepanelio/workflow_templates/${workflowTemplateUid}/versions/${version}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    },
+
+    async executeWorkflow(taskInstanceId: string, payload: any) {
+        return OnepanelApi.fetchJson(`${baseUrl}/onepanelio/execute_workflow/${taskInstanceId}`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
         });
     },
 
@@ -49,8 +106,7 @@ export const OnepanelApi = {
 
     async getAnnotationPath(id: string, workflowTemplateUid: string) {
         return core.server.request(`${baseUrl}/onepanelio/get_annotation_path/${id}`, {
-            method: 'POST',
-            data: { uid: workflowTemplateUid },
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             },

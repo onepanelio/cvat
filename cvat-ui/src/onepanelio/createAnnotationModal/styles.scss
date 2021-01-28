@@ -24,3 +24,12 @@
     justify-content: space-between;
     width: 150px;
 }
+
+.workflow-executed-message {
+    margin-bottom: 15px;
+}
+
+// This is fixed in newer ant versions. Small buttons look off without this
+.fix-ant-spacing {
+    line-height: 1.5715;
+}

@@ -66,8 +66,8 @@ export function getWorkflowTemplateAsync(taskInstance: any) : ThunkAction {
         try {
             dispatch(createAnnotationAction.openNewAnnotationDialog(taskInstance));
             const response =  await core.server.request(
-                `${baseURL}/onepanelio/get_workflow_templates`, {
-                    method: 'POST',
+                `${baseURL}/onepanelio/workflow_templates`, {
+                    method: 'GET',
                 }
             );
             dispatch(createAnnotationAction.hideFetchingWorkflow());
