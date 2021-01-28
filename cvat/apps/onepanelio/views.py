@@ -178,16 +178,7 @@ def get_base_model(request):
     return Response({'keys': []})
 
 
-def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
-    s3_client, bucket_name = create_s3_client()
-
-    parameters = form_data['parameters']
-    cvat_finetune_checkpoint = ''.join(parameters.get('cvat-finetune-checkpoint', '').split())
-    if cvat_finetune_checkpoint != '':
-        results = s3_client.list_objects(Bucket=bucket_name, Prefix=cvat_finetune_checkpoint)
-        if not 'Contents' in results:
-            raise botocore.exceptions.ClientError(error_response={'Error': {}}, operation_name=None)
-
+def upload_annotation_data(uid, db_task, parameters, object_storage_prefix, s3_client, bucket_name):
     project = DatumaroTask.TaskProject.from_task(
         Task.objects.get(pk=uid), db_task.owner.username)
 
@@ -200,7 +191,6 @@ def upload_annotation_data(uid, db_task, form_data, object_storage_prefix):
     with tempfile.TemporaryDirectory(dir=os.getenv('CVAT_DATA_DIR', '/cvat/data')) as tmp_dir:
         project.export(dump_format, tmp_dir, save_images=True)
 
-        # read artifactRepository to find out cloud provider and get access for upload
         TB = 1024 ** 4
         transfer_config = TransferConfig(
             multipart_threshold=1 * TB,
@@ -238,14 +228,20 @@ def execute_training_workflow(request, pk):
     time = datetime.now()
     stamp = time.strftime('%m%d%Y%H%M%S')
 
+    s3_client, bucket_name = create_s3_client()
+
+    # check if cvat-finetune-checkpoint exists in object storage
+    checkpoint_path = parameters.get('cvat-finetune-checkpoint', '')
+    if checkpoint_path:
+        results = s3_client.list_objects(Bucket=bucket_name, Prefix=checkpoint_path)
+        parameters['cvat-finetune-checkpoint'] = '\'{checkpoint}\''.format(checkpoint=checkpoint_path)
+        if not 'Contents' in results:
+            return JsonResponse({'message':'Checkpoint path does not exist in object storage.'}, status=status.HTTP_404_NOT_FOUND)
+
     # dump annotations into object storage
     annotations_object_storage_prefix = os.getenv('CVAT_ANNOTATIONS_OBJECT_STORAGE_PREFIX') + str(
         db_task.id) + '/' + stamp + '/'
-    if 'cvat-annotation-path' in parameters:
-        try:
-            upload_annotation_data(int(pk), db_task, form_data, annotations_object_storage_prefix)
-        except botocore.exceptions.ClientError as e:
-            return JsonResponse({'message':'Checkpoint path does not exist in object storage.'}, status=status.HTTP_404_NOT_FOUND)
+    upload_annotation_data(int(pk), db_task, parameters, annotations_object_storage_prefix, s3_client, bucket_name)
 
     configuration = onepanel_authorize(request)
     # Enter a context with an instance of the API client
