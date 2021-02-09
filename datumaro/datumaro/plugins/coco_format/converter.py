@@ -294,7 +294,7 @@ class _InstancesConverter(_TaskConverter):
             area = mask_utils.area(rles)
         else:
             x, y, w, h = bbox
-            segmentation = [[x, y, x + w, y, x + w, y + h, x, y + h]]
+            segmentation = []
             area = w * h
 
         elem = {
@@ -514,7 +514,7 @@ class _Converter:
         filename += CocoPath.IMAGE_EXT
         path = osp.join(self._images_dir, filename)
         save_image(path, image)
-        return path
+        return filename
 
     def convert(self):
         self._make_dirs()
