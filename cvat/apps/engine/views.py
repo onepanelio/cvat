@@ -69,6 +69,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 # on the server side.
 from ..onepanelio.models import OnepanelAuth
 
+from django.http import JsonResponse
+
 
 def wrap_swagger(view):
 	@login_required
@@ -570,8 +572,14 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
 					if action == "download":
 						rq_job.meta[action] = True
 						rq_job.save_meta()
-						return sendfile(request, rq_job.meta["file_path"], attachment=True,
-							attachment_filename="{}.{}".format(filename, db_dumper.format.lower()))
+						dest_dir = '/share/cvat/annotations/'
+						dest = '{}{}.{}'.format(dest_dir, filename, db_dumper.format.lower())
+						os.makedirs(dest_dir, exist_ok=True)
+						shutil.copyfile(rq_job.meta["file_path"], dest)
+
+						return JsonResponse({
+							"message": "Your annotations have been dumped to {}".format(dest)
+						})
 					else:
 						return Response(status=status.HTTP_201_CREATED)
 				else: # Remove the old dump file
@@ -763,11 +771,19 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
 					if action == "download" and osp.exists(file_path):
 						rq_job.delete()
 
+
 						timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 						filename = "task_{}-{}-{}.zip".format(
 							db_task.name, timestamp, dst_format)
-						return sendfile(request, file_path, attachment=True,
-							attachment_filename=filename.lower())
+
+						dest_dir = '/share/cvat/datasets/'
+						dest = '{}{}.{}'.format(dest_dir, filename, filename)
+						os.makedirs(dest_dir, exist_ok=True)
+						shutil.copyfile(file_path, dest)
+
+						return JsonResponse({
+							"message": "Your datasets have been dumped to {}".format(dest)
+						})
 					else:
 						if osp.exists(file_path):
 							return Response(status=status.HTTP_201_CREATED)
