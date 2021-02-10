@@ -11,6 +11,7 @@ import {
 import { getCVATStore } from 'cvat-store';
 import getCore from 'cvat-core-wrapper';
 import { getInferenceStatusAsync } from './models-actions';
+import { notification } from 'antd';
 
 const cvat = getCore();
 
@@ -169,10 +170,14 @@ ThunkAction<Promise<void>, {}, {}, AnyAction> {
     return async (dispatch: ActionCreator<Dispatch>): Promise<void> => {
         try {
             dispatch(dumpAnnotation(task, dumper));
-            const url = await task.annotations.dump(task.name, dumper);
-            const downloadAnchor = (window.document.getElementById('downloadAnchor') as HTMLAnchorElement);
-            downloadAnchor.href = url;
-            downloadAnchor.click();
+            const res = await task.annotations.dump(task.name, dumper);
+
+            notification.open({
+                message: 'Success',
+                description: `${res.data.message}`,
+                duration: 0,
+            });
+            
         } catch (error) {
             dispatch(dumpAnnotationFailed(task, dumper, error));
             return;
@@ -280,10 +285,12 @@ ThunkAction<Promise<void>, {}, {}, AnyAction> {
         dispatch(exportDataset(task, exporter));
 
         try {
-            const url = await task.annotations.exportDataset(exporter.tag);
-            const downloadAnchor = (window.document.getElementById('downloadAnchor') as HTMLAnchorElement);
-            downloadAnchor.href = url;
-            downloadAnchor.click();
+            const res = await task.annotations.exportDataset(exporter.tag);
+            notification.open({
+                message: 'Success',
+                description: `${res.data.message}`,
+                duration: 0,
+            });
         } catch (error) {
             dispatch(exportDatasetFailed(task, exporter, error));
         }

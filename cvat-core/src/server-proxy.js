@@ -319,7 +319,12 @@
                                 setTimeout(request, 3000);
                             } else {
                                 url = `${url}&action=download`;
-                                resolve(url);
+
+                                Axios.get(url, {
+                                    proxy: config.proxy,
+                                }).then(res => {
+                                    resolve(res);
+                                })
                             }
                         } catch (errorData) {
                             reject(generateError(errorData));
@@ -632,7 +637,12 @@
                             } else {
                                 query = `${query}&action=download`;
                                 url = `${baseURL}?${query}`;
-                                resolve(url);
+
+                                Axios.get(url, {
+                                    proxy: config.proxy,
+                                }).then(res => {
+                                    resolve(res);
+                                })
                             }
                         }).catch((errorData) => {
                             reject(generateError(errorData));
