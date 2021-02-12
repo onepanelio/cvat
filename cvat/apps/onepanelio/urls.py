@@ -2,8 +2,16 @@
 #
 # SPDX-License-Identifier: MIT
 
-from django.urls import path
-from . import views
+from django.urls import path, include
+from . import views, views_overrides
+from rest_framework import routers
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+
+router = routers.DefaultRouter(trailing_slash=False)
+router.register('tasks', views_overrides.TaskViewSet)
 
 urlpatterns = [
     path('workflow_templates', views.list_workflow_templates),
@@ -16,4 +24,6 @@ urlpatterns = [
     path('get_available_dump_formats', views.get_available_dump_formats),
     path('get_output_path/<int:pk>', views.generate_output_path),
     path('get_annotation_path/<int:pk>', views.generate_dataset_path),
+
+    path('api/opv1/', include(router.urls))
 ]

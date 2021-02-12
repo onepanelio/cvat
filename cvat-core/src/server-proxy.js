@@ -306,7 +306,8 @@
 
             async function exportDataset(id, format) {
                 const { backendAPI } = config;
-                let url = `${backendAPI}/tasks/${id}/dataset?format=${format}`;
+                const opBackendAPI = backendAPI.replace('api/v1', 'onepanelio/api/opv1');
+                let url = `${opBackendAPI}/tasks/${id}/dataset?format=${format}`;
 
                 return new Promise((resolve, reject) => {
                     async function request() {
@@ -623,7 +624,8 @@
             async function dumpAnnotations(id, name, format) {
                 const { backendAPI } = config;
                 const filename = name.replace(/\//g, '_');
-                const baseURL = `${backendAPI}/tasks/${id}/annotations/${encodeURIComponent(filename)}`;
+                const opBackendAPI = backendAPI.replace('api/v1', 'onepanelio/api/opv1');
+                const baseURL = `${opBackendAPI}/tasks/${id}/annotations/${encodeURIComponent(filename)}`;
                 let query = `format=${encodeURIComponent(format)}`;
                 let url = `${baseURL}?${query}`;
 
