@@ -160,7 +160,7 @@ REST_AUTH_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'cvat.apps.authentication.serializers.RegisterSerializerEx'
 }
 
-INSTALLED_APPS += ['cvat.apps.onepanelio', 'cvat.apps.onepanelio_overrides']
+INSTALLED_APPS += ['cvat.apps.onepanelio']
 
 if 'yes' == os.environ.get('TF_ANNOTATION', 'no'):
     INSTALLED_APPS += ['cvat.apps.tf_annotation']
