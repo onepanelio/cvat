@@ -63,6 +63,3 @@ if apps.is_installed('cvat.apps.tracking'):
 if apps.is_installed('cvat.apps.onepanelio'):
     urlpatterns.append(path('onepanelio/', include('cvat.apps.onepanelio.urls')))
 
-if apps.is_installed('cvat.apps.onepanelio_overrides'):
-    urlpatterns.insert(0, (path('', include('cvat.apps.onepanelio_overrides.urls'))))
-
