@@ -25,5 +25,5 @@ urlpatterns = [
     path('get_output_path/<int:pk>', views.generate_output_path),
     path('get_annotation_path/<int:pk>', views.generate_dataset_path),
 
-    path('api/opv1/', include(router.urls))
+    path('api/v1/', include(router.urls))
 ]
