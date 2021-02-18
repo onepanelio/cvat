@@ -574,7 +574,8 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
 					if action == "download":
 						rq_job.meta[action] = True
 						rq_job.save_meta()
-						dest_dir = '/share/cvat/annotations/'
+
+						dest_dir = '/share/cvat/annotations/' + db_task.name + '/'
 						dest = '{}{}.{}'.format(dest_dir, filename, db_dumper.format.lower())
 						os.makedirs(dest_dir, exist_ok=True)
 						shutil.copyfile(rq_job.meta["file_path"], dest)
@@ -778,9 +779,10 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
 						filename = "task_{}-{}-{}.zip".format(
 							db_task.name, timestamp, dst_format)
 
-						dest_dir = '/share/cvat/datasets/'
-						dest = '{}{}'.format(dest_dir, filename)
-						os.makedirs(dest_dir, exist_ok=True)
+						dataset_dir = '/share/cvat/datasets/'
+						task_dir = dataset_dir + db_task.name
+						dest = '{}/{}'.format(task_dir, filename)
+						os.makedirs(task_dir, exist_ok=True)
 						shutil.copyfile(file_path, dest)
 
 						return JsonResponse({
