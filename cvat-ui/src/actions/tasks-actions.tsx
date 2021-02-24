@@ -11,6 +11,19 @@ import {
 import { getCVATStore } from 'cvat-store';
 import getCore from 'cvat-core-wrapper';
 import { getInferenceStatusAsync } from './models-actions';
+import React from 'react';
+import {
+    Row,
+    Col,
+    Modal,
+    Select,
+    notification,
+    Input,
+    Button,
+    Spin,
+    Typography
+} from 'antd';
+import Paragraph from 'antd/lib/typography/Paragraph';
 
 const cvat = getCore();
 
@@ -169,10 +182,40 @@ ThunkAction<Promise<void>, {}, {}, AnyAction> {
     return async (dispatch: ActionCreator<Dispatch>): Promise<void> => {
         try {
             dispatch(dumpAnnotation(task, dumper));
-            const url = await task.annotations.dump(task.name, dumper);
-            const downloadAnchor = (window.document.getElementById('downloadAnchor') as HTMLAnchorElement);
-            downloadAnchor.href = url;
-            downloadAnchor.click();
+
+            const res = await task.annotations.dump(task.name, dumper);
+
+            const message = res.data.message;
+            const shareIndex = message.indexOf('/share/');
+            const preMessage = message.substring(0, shareIndex + 7);
+            const postMessage = message.substring(shareIndex + 7);
+            const lastSlash = postMessage.lastIndexOf('/');
+            const copyContent = postMessage.substring(0, lastSlash);
+
+            const description = (
+                <Paragraph>{message}</Paragraph>
+            );
+
+            const btn = (
+                    <Button
+                        type="primary"
+                        size="small"
+                        className="fix-ant-spacing"
+                        onClick={() => {
+                            copyText(copyContent);
+                        }}
+                    >
+                        Copy directory path
+                    </Button>
+            );
+
+            notification.open({
+                message: 'Success',
+                description: description,
+                duration: 0,
+                btn
+            });
+            
         } catch (error) {
             dispatch(dumpAnnotationFailed(task, dumper, error));
             return;
@@ -274,21 +317,64 @@ function exportDatasetFailed(task: any, exporter: any, error: any): AnyAction {
     return action;
 }
 
+function copyText(text: string) {
+    const selBox = document.createElement('textarea');
+    selBox.style.position = 'fixed';
+    selBox.style.left = '0';
+    selBox.style.top = '0';
+    selBox.style.opacity = '0';
+    selBox.value = text;
+    document.body.appendChild(selBox);
+    selBox.focus();
+    selBox.select();
+    document.execCommand('copy');
+    document.body.removeChild(selBox);
+}
+
 export function exportDatasetAsync(task: any, exporter: any):
 ThunkAction<Promise<void>, {}, {}, AnyAction> {
     return async (dispatch: ActionCreator<Dispatch>): Promise<void> => {
         dispatch(exportDataset(task, exporter));
 
         try {
-            const url = await task.annotations.exportDataset(exporter.tag);
-            const downloadAnchor = (window.document.getElementById('downloadAnchor') as HTMLAnchorElement);
-            downloadAnchor.href = url;
-            downloadAnchor.click();
+            const res = await task.annotations.exportDataset(exporter.tag);
+
+            const message = res.data.message;
+            const shareIndex = message.indexOf('/share/');
+            const preMessage = message.substring(0, shareIndex + 7);
+            const postMessage = message.substring(shareIndex + 7);
+            const lastSlash = postMessage.lastIndexOf('/');
+            const copyContent = postMessage.substring(0, lastSlash);
+
+            const description = (
+                <Paragraph>{message}</Paragraph>
+            );
+
+            const btn = (
+                    <Button
+                        type="primary"
+                        size="small"
+                        className="fix-ant-spacing"
+                        onClick={() => {
+                            copyText(copyContent);
+                        }}
+                    >
+                        Copy directory path
+                    </Button>
+            );
+
+            notification.open({
+                message: 'Success',
+                description: description,
+                duration: 0,
+                btn
+            
+            });
+
+            dispatch(exportDatasetSuccess(task, exporter));
         } catch (error) {
             dispatch(exportDatasetFailed(task, exporter, error));
         }
-
-        dispatch(exportDatasetSuccess(task, exporter));
     };
 }
 
