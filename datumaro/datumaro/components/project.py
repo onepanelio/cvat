@@ -355,9 +355,12 @@ class Dataset(Extractor):
             anno_key = ''.join(filter(lambda x: 'anno' in x, self._sources.keys()))
             images_key = ''.join(filter(lambda x: 'images' in x, self._sources.keys()))
         
-            for item, item_image in zip(self._sources[anno_key], self._sources[images_key]):
-                item = item.wrap(path=None, annotations=item.annotations, image=item_image.image)
-                yield item
+            for item in self._sources[anno_key]:
+                for item_image in self._sources[images_key]:
+                    if item.id == item_image.id:
+                        item = item.wrap(path=None, annotations=item.annotations, image=item_image.image)
+                        yield item
+                        break
 
     def __len__(self):
         if self._length is None:
