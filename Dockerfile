@@ -84,6 +84,8 @@ RUN apt-get update && \
         git-lfs \
         poppler-utils \
         ssh \
+        nano \
+        vim \
         curl && \
     ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata && \

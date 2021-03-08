@@ -135,6 +135,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'cvat.apps.onepanelio.middleware.OnepanelCoreTokenAuthentication',
         'cvat.apps.authentication.auth.TokenAuthentication',
         'cvat.apps.authentication.auth.SignatureAuthentication',
         'rest_framework.authentication.SessionAuthentication',
@@ -165,6 +166,7 @@ REST_FRAMEWORK = {
     },
 }
 
+INSTALLED_APPS += ['cvat.apps.onepanelio']
 REST_AUTH_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'cvat.apps.restrictions.serializers.RestrictedRegisterSerializer',
 }
@@ -185,6 +187,8 @@ MIDDLEWARE = [
     # FIXME
     # 'corsheaders.middleware.CorsPostCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Add the new middleware just after the default AuthenticationMiddleware that manages sessions and cookies
+    'cvat.apps.onepanelio.middleware.AutomaticUserLoginMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'dj_pagination.middleware.PaginationMiddleware',
@@ -225,6 +229,8 @@ LOGIN_URL = 'rest_login'
 LOGIN_REDIRECT_URL = '/'
 
 AUTHENTICATION_BACKENDS = [
+    'cvat.apps.onepanelio.backends.OnepanelIORestBackend',
+    'cvat.apps.onepanelio.backends.OnepanelIOBackend',
     'rules.permissions.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
@@ -333,32 +339,39 @@ CSRF_COOKIE_NAME = "csrftoken"
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 os.makedirs(STATIC_ROOT, exist_ok=True)
+STATIC_ROOT = os.environ.get("CVAT_STATIC_DIR", STATIC_ROOT)
 
 DATA_ROOT = os.path.join(BASE_DIR, 'data')
+DATA_ROOT = os.environ.get("CVAT_DATA_DIR", DATA_ROOT)
+MEDIA_ROOT = DATA_ROOT
 os.makedirs(DATA_ROOT, exist_ok=True)
 
 MEDIA_DATA_ROOT = os.path.join(DATA_ROOT, 'data')
+MEDIA_DATA_ROOT = os.environ.get("CVAT_MEDIA_DATA_DIR", MEDIA_DATA_ROOT)
 os.makedirs(MEDIA_DATA_ROOT, exist_ok=True)
 
-CACHE_ROOT = os.path.join(DATA_ROOT, 'cache')
-os.makedirs(CACHE_ROOT, exist_ok=True)
-
 TASKS_ROOT = os.path.join(DATA_ROOT, 'tasks')
+TASKS_ROOT = os.environ.get("CVAT_TASKS_DIR", TASKS_ROOT)
 os.makedirs(TASKS_ROOT, exist_ok=True)
 
-PROJECTS_ROOT = os.path.join(DATA_ROOT, 'projects')
-os.makedirs(PROJECTS_ROOT, exist_ok=True)
-
-SHARE_ROOT = os.path.join(BASE_DIR, 'share')
-os.makedirs(SHARE_ROOT, exist_ok=True)
+CACHE_ROOT = os.path.join(DATA_ROOT, 'cache')
+CACHE_ROOT = os.environ.get("CVAT_CACHE_DIR", CACHE_ROOT)
+os.makedirs(CACHE_ROOT, exist_ok=True)
 
 MODELS_ROOT = os.path.join(DATA_ROOT, 'models')
+MODELS_ROOT = os.environ.get("CVAT_MODELS_DIR", MODELS_ROOT)
 os.makedirs(MODELS_ROOT, exist_ok=True)
 
+SHARE_ROOT = os.path.join(BASE_DIR, 'share')
+SHARE_ROOT = os.environ.get("CVAT_SHARE_DIR", SHARE_ROOT)
+os.makedirs(SHARE_ROOT, exist_ok=True)
+
 LOGS_ROOT = os.path.join(BASE_DIR, 'logs')
+LOGS_ROOT = os.environ.get("CVAT_LOGS_DIR", LOGS_ROOT)
 os.makedirs(LOGS_ROOT, exist_ok=True)
 
 MIGRATIONS_LOGS_ROOT = os.path.join(LOGS_ROOT, 'migrations')
+MIGRATIONS_LOGS_ROOT = os.environ.get("CVAT_MIGRATIONS_DIR", MIGRATIONS_LOGS_ROOT)
 os.makedirs(MIGRATIONS_LOGS_ROOT, exist_ok=True)
 
 LOGGING = {

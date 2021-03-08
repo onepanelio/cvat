@@ -14,6 +14,7 @@ import DetailsContainer from 'containers/task-page/details';
 import JobListContainer from 'containers/task-page/job-list';
 import ModelRunnerModal from 'components/model-runner-modal/model-runner-dialog';
 import { Task } from 'reducers/interfaces';
+import ModelNewAnnotationModalContainer from 'onepanelio/createAnnotationModal/createAnnotation.container';
 import TopBarComponent from './top-bar';
 
 interface TaskPageComponentProps {
@@ -83,6 +84,7 @@ class TaskPageComponent extends React.PureComponent<Props> {
                     </Col>
                 </Row>
                 <ModelRunnerModal />
+                <ModelNewAnnotationModalContainer />
                 {updating && <Spin size='large' className='cvat-spinner' />}
             </>
         );

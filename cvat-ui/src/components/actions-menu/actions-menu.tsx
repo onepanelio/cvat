@@ -33,6 +33,7 @@ export enum Actions {
     DELETE_TASK = 'delete_task',
     RUN_AUTO_ANNOTATION = 'run_auto_annotation',
     OPEN_BUG_TRACKER = 'open_bug_tracker',
+    OPEN_NEW_ANNOTATION = 'open_new_annotation',
 }
 
 export default function ActionsMenuComponent(props: Props): JSX.Element {
@@ -119,6 +120,9 @@ export default function ActionsMenuComponent(props: Props): JSX.Element {
             {!!bugTracker && <Menu.Item key={Actions.OPEN_BUG_TRACKER}>Open bug tracker</Menu.Item>}
             <Menu.Item disabled={inferenceIsActive} key={Actions.RUN_AUTO_ANNOTATION}>
                 Automatic annotation
+            </Menu.Item>
+            <Menu.Item disabled={inferenceIsActive} key={Actions.OPEN_NEW_ANNOTATION}>
+                Execute training Workflow
             </Menu.Item>
             <hr />
             <Menu.Item key={Actions.DELETE_TASK}>Delete</Menu.Item>

@@ -5,6 +5,7 @@
 import { ExtendedKeyMapOptions } from 'react-hotkeys';
 import { Canvas, RectDrawingMethod } from 'cvat-canvas-wrapper';
 import { MutableRefObject } from 'react';
+import { WorkflowTemplates } from '../onepanelio/createAnnotationModal/interfaces';
 
 export type StringObject = {
     [index: string]: string;
@@ -207,6 +208,11 @@ export interface ModelsState {
     };
     visibleRunWindows: boolean;
     activeRunTask: any;
+    visibleNewAnnotationWindows: boolean;
+    activeNewAnnotationTask: any;
+    baseModelList: string[];
+    workflowTemplates: WorkflowTemplates[];
+    fetchingWorkflowTemplates: boolean;
 }
 
 export interface ErrorState {
