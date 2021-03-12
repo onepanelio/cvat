@@ -349,7 +349,7 @@ export default class ModelNewAnnotationModalComponent extends React.PureComponen
                                     />
                             }
                             {
-                                parameter.type === "textarea.textarea" &&
+                                (parameter.type === "textarea.textarea" || parameter.type === "editor.yaml") &&
                                     <TextAreaParameter 
                                         parameter={parameter}
                                         value={parameterMap[parameter.name]}
